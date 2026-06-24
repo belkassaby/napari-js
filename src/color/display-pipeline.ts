@@ -1,0 +1,46 @@
+import type { Colormap, RGB } from './colormap';
+
+/**
+ * CPU reference for the scalar display math the `image-colormap` WGSL shader performs:
+ * window → invert → gamma. Returns the normalized LUT coordinate `t` in 0..1. Kept pure and
+ * tested so the shader has a ground truth (see docs/04) and so histograms/readback can reuse
+ * the exact same math. `value` and the clim are in the same units.
+ */
+export function windowGamma(
+  value: number,
+  climLo: number,
+  climHi: number,
+  gamma: number,
+  invert: boolean,
+): number {
+  const denom = Math.max(climHi - climLo, 1e-8);
+  let t = clamp01((value - climLo) / denom);
+  if (invert) t = 1 - t;
+  return Math.pow(t, gamma);
+}
+
+/** Map a scalar value through window/gamma and a colormap to linear RGB. */
+export function mapScalar(
+  value: number,
+  opts: { climLo: number; climHi: number; gamma: number; invert: boolean; colormap: Colormap },
+): RGB {
+  return opts.colormap.sample(windowGamma(value, opts.climLo, opts.climHi, opts.gamma, opts.invert));
+}
+
+/**
+ * Additive composite of premultiplied RGB contributions (channels with `blending: 'additive'`
+ * over a black background), clamped to 1 — the CPU reference for multi-channel fluorescence.
+ */
+export function additiveComposite(colors: readonly RGB[]): RGB {
+  const out: RGB = [0, 0, 0];
+  for (const c of colors) {
+    out[0] += c[0];
+    out[1] += c[1];
+    out[2] += c[2];
+  }
+  return [clamp01(out[0]), clamp01(out[1]), clamp01(out[2])];
+}
+
+export function clamp01(x: number): number {
+  return x < 0 ? 0 : x > 1 ? 1 : x;
+}

@@ -4,24 +4,56 @@ import type { BlendMode } from '../layers/layer';
 import { multiply, scaleTranslate2d } from '../math/mat4';
 import { buildLut, LUT_SIZE } from '../color/lut';
 import { GRAY } from '../color/colormap';
-import { channelsOf } from '../io/texture-source';
+import type { TextureSource } from '../io/texture-source';
 import { IMAGE_COLORMAP_SHADER } from './image-colormap-shader';
 import { blendStateFor } from './blend';
 
 const UNIFORM_FLOATS = 28; // 112 bytes: mat4(16) + vec2+pad(4) + vec4(4) + vec4(4)
 const UNIFORM_BYTES = UNIFORM_FLOATS * 4;
 
+/** How a source maps onto a GPU texture: format, byte stride, filterability, clim scaling. */
+interface UploadPlan {
+  format: GPUTextureFormat;
+  bytesPerPixel: number;
+  /** Whether the texture can be linearly filtered (drives sampler + bind-group layout). */
+  filterable: boolean;
+  /** Factor applied to contrast limits so they match the shader's sample space. */
+  sampleScale: number;
+  isRgba: boolean;
+  /** Typed-array bytes to upload (null for external images copied via copyExternalImage). */
+  data: Uint8Array | Uint16Array | Float32Array | null;
+}
+
+function planUpload(source: TextureSource, float32Filterable: boolean): UploadPlan {
+  if (source.kind === 'external') {
+    return { format: 'rgba8unorm', bytesPerPixel: 4, filterable: true, sampleScale: 1 / 255, isRgba: true, data: null };
+  }
+  if (source.channels === 4) {
+    return { format: 'rgba8unorm', bytesPerPixel: 4, filterable: true, sampleScale: 1 / 255, isRgba: true, data: source.data };
+  }
+  // Single-channel scalar.
+  if (source.dtype === 'uint8') {
+    return { format: 'r8unorm', bytesPerPixel: 1, filterable: true, sampleScale: 1 / 255, isRgba: false, data: source.data };
+  }
+  // uint16 / float32 → r32float (exact native-precision values; clim in data units).
+  const data = source.dtype === 'uint16' ? Float32Array.from(source.data) : source.data;
+  return { format: 'r32float', bytesPerPixel: 4, filterable: float32Filterable, sampleScale: 1, isRgba: false, data };
+}
+
 /**
  * Binds one {@link ImageLayer} to a WebGPU pipeline: uploads the source texture and colormap
- * LUT, and draws the layer each frame with its current display uniforms. The napari
- * `Vispy*Layer` wrapper analog — it reads the layer and pushes to the GPU.
- *
- * NJ-1 uploads `uint8` sources (r8unorm / rgba8unorm). float32 / 16-bit land in NJ-2.
+ * LUT, and draws the layer each frame with its current display uniforms (the napari
+ * `Vispy*Layer` wrapper analog). Supports uint8 (r8unorm/rgba8unorm) and uint16/float32
+ * (r32float, native-precision windowing). Uses an explicit bind-group layout so unfilterable
+ * float textures render correctly when `float32-filterable` is unavailable.
  */
 export class ImageVisual {
   private readonly module: GPUShaderModule;
   private readonly uniformBuffer: GPUBuffer;
   private readonly scratch = new Float32Array(UNIFORM_FLOATS);
+  private readonly bindGroupLayout: GPUBindGroupLayout;
+  private readonly pipelineLayout: GPUPipelineLayout;
+  private readonly plan: UploadPlan;
 
   private texture!: GPUTexture;
   private lutTexture!: GPUTexture;
@@ -34,22 +66,21 @@ export class ImageVisual {
   private currentInterp: Interpolation;
   private lutVersion: number;
 
-  /** clim normalization factor: r8unorm/rgba8unorm samples are value/255. */
-  private readonly sampleScale: number;
-  private readonly isRgba: boolean;
-
   constructor(
     private readonly device: GPUDevice,
     private readonly format: GPUTextureFormat,
     private readonly layer: ImageLayer,
+    opts: { float32Filterable: boolean } = { float32Filterable: false },
   ) {
+    this.plan = planUpload(layer.source, opts.float32Filterable);
     this.module = device.createShaderModule({ code: IMAGE_COLORMAP_SHADER });
     this.uniformBuffer = device.createBuffer({
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    this.isRgba = channelsOf(layer.source) === 4;
-    this.sampleScale = 1 / 255;
+
+    this.bindGroupLayout = this.buildBindGroupLayout();
+    this.pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] });
 
     this.uploadTexture();
     this.lutTexture = this.createLutTexture();
@@ -67,12 +98,25 @@ export class ImageVisual {
     this.lutVersion = layer.colormapVersion;
   }
 
+  private buildBindGroupLayout(): GPUBindGroupLayout {
+    const f = this.plan.filterable;
+    return this.device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: f ? 'filtering' : 'non-filtering' } },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: f ? 'float' : 'unfilterable-float' } },
+        { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      ],
+    });
+  }
+
   private uploadTexture(): void {
     const src = this.layer.source;
     if (src.kind === 'external') {
       this.texture = this.device.createTexture({
         size: [src.width, src.height],
-        format: 'rgba8unorm',
+        format: this.plan.format,
         usage:
           GPUTextureUsage.TEXTURE_BINDING |
           GPUTextureUsage.COPY_DST |
@@ -86,24 +130,15 @@ export class ImageVisual {
       return;
     }
 
-    if (src.dtype !== 'uint8') {
-      throw new Error(
-        `napari-js NJ-1 supports uint8 image data; got "${src.dtype}". ` +
-          `float32 / 16-bit rendering arrives in NJ-2.`,
-      );
-    }
-    const format: GPUTextureFormat = src.channels === 1 ? 'r8unorm' : 'rgba8unorm';
-    const bytesPerPixel = src.channels === 1 ? 1 : 4;
     this.texture = this.device.createTexture({
       size: [src.width, src.height],
-      format,
+      format: this.plan.format,
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
     this.device.queue.writeTexture(
       { texture: this.texture },
-      // User-supplied typed array: cast at the boundary (TS 5.7 widens its buffer generic).
-      src.data as GPUAllowSharedBufferSource,
-      { bytesPerRow: src.width * bytesPerPixel, rowsPerImage: src.height },
+      this.plan.data as GPUAllowSharedBufferSource,
+      { bytesPerRow: src.width * this.plan.bytesPerPixel, rowsPerImage: src.height },
       { width: src.width, height: src.height },
     );
   }
@@ -129,7 +164,8 @@ export class ImageVisual {
   }
 
   private createSrcSampler(interp: Interpolation): GPUSampler {
-    const filter: GPUFilterMode = interp === 'nearest' ? 'nearest' : 'linear';
+    // Unfilterable float textures must use nearest filtering.
+    const filter: GPUFilterMode = !this.plan.filterable || interp === 'nearest' ? 'nearest' : 'linear';
     return this.device.createSampler({
       magFilter: filter,
       minFilter: filter,
@@ -140,7 +176,7 @@ export class ImageVisual {
 
   private buildPipeline(blend: BlendMode): GPURenderPipeline {
     return this.device.createRenderPipeline({
-      layout: 'auto',
+      layout: this.pipelineLayout,
       vertex: { module: this.module, entryPoint: 'vs' },
       fragment: {
         module: this.module,
@@ -153,7 +189,7 @@ export class ImageVisual {
 
   private buildBindGroup(): GPUBindGroup {
     return this.device.createBindGroup({
-      layout: this.pipeline.getBindGroupLayout(0),
+      layout: this.bindGroupLayout,
       entries: [
         { binding: 0, resource: { buffer: this.uniformBuffer } },
         { binding: 1, resource: this.srcSampler },
@@ -169,7 +205,6 @@ export class ImageVisual {
     if (this.layer.blending !== this.currentBlend) {
       this.currentBlend = this.layer.blending;
       this.pipeline = this.buildPipeline(this.currentBlend);
-      this.bindGroup = this.buildBindGroup();
     }
     if (this.layer.interpolation !== this.currentInterp) {
       this.currentInterp = this.layer.interpolation;
@@ -200,11 +235,11 @@ export class ImageVisual {
     s[18] = 0;
     s[19] = 0;
     const [lo, hi] = this.layer.contrastLimits;
-    s[20] = lo * this.sampleScale;
-    s[21] = hi * this.sampleScale;
+    s[20] = lo * this.plan.sampleScale;
+    s[21] = hi * this.plan.sampleScale;
     s[22] = this.layer.gamma;
     s[23] = this.layer.opacity;
-    s[24] = this.isRgba ? 1 : 0;
+    s[24] = this.plan.isRgba ? 1 : 0;
     s[25] = this.layer.invert ? 1 : 0;
     s[26] = 0;
     s[27] = 0;

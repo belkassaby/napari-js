@@ -1,7 +1,14 @@
-/** A live WebGPU adapter + device pair. */
+/** GPU features napari-js opts into when the adapter supports them. */
+export interface DeviceFeatures {
+  /** Linear filtering of `r32float` textures (else 16-bit/float layers fall back to nearest). */
+  float32Filterable: boolean;
+}
+
+/** A live WebGPU adapter + device pair plus the negotiated optional features. */
 export interface DeviceContext {
   adapter: GPUAdapter;
   device: GPUDevice;
+  features: DeviceFeatures;
 }
 
 /** Thrown when WebGPU is unavailable or no adapter/device can be obtained. */
@@ -13,9 +20,9 @@ export class WebGPUUnsupportedError extends Error {
 }
 
 /**
- * Acquire a WebGPU device. Throws {@link WebGPUUnsupportedError} with an actionable message
- * when the environment lacks `navigator.gpu`, has no suitable adapter, or device creation
- * fails — so callers can surface a clear "this browser doesn't support WebGPU" state.
+ * Acquire a WebGPU device, opting into `float32-filterable` when available. Throws
+ * {@link WebGPUUnsupportedError} with an actionable message when the environment lacks
+ * `navigator.gpu`, has no suitable adapter, or device creation fails.
  */
 export async function acquireDevice(
   options: { powerPreference?: GPUPowerPreference } = {},
@@ -31,9 +38,13 @@ export async function acquireDevice(
   if (!adapter) {
     throw new WebGPUUnsupportedError('No suitable GPUAdapter was found.');
   }
+
+  const float32Filterable = adapter.features.has('float32-filterable');
+  const requiredFeatures: GPUFeatureName[] = float32Filterable ? ['float32-filterable'] : [];
+
   try {
-    const device = await adapter.requestDevice();
-    return { adapter, device };
+    const device = await adapter.requestDevice({ requiredFeatures });
+    return { adapter, device, features: { float32Filterable } };
   } catch (cause) {
     throw new WebGPUUnsupportedError(
       `Failed to create a GPUDevice: ${cause instanceof Error ? cause.message : String(cause)}`,

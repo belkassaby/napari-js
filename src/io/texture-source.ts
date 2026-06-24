@@ -4,16 +4,19 @@
  * external decoded image (ImageBitmap/canvas) uploaded via `copyExternalImageToTexture`.
  */
 
-export type PixelDtype = 'uint8' | 'float32';
+export type PixelDtype = 'uint8' | 'uint16' | 'float32';
 
-/** Raw scalar/RGBA pixels in a typed array. NJ-1 renders `uint8`; `float32`/16-bit = NJ-2. */
+/**
+ * Raw scalar/RGBA pixels in a typed array. `uint8` → `r8unorm`/`rgba8unorm`;
+ * `uint16`/`float32` scalar → `r32float` (native-precision windowing). RGBA is `uint8` only.
+ */
 export interface TypedImageSource {
   readonly kind: 'typed';
   readonly width: number;
   readonly height: number;
   readonly channels: 1 | 4;
   readonly dtype: PixelDtype;
-  readonly data: Uint8Array | Float32Array;
+  readonly data: Uint8Array | Uint16Array | Float32Array;
 }
 
 /** A decoded image to upload directly to an RGBA8 texture. */
@@ -39,7 +42,10 @@ export function isGrayscale(source: TextureSource): boolean {
 
 /** Default contrast-limit window for a source, in source-data units. */
 export function defaultContrastLimits(source: TextureSource): [number, number] {
-  if (source.kind === 'typed' && source.dtype === 'float32') return [0, 1];
+  if (source.kind === 'typed') {
+    if (source.dtype === 'float32') return [0, 1];
+    if (source.dtype === 'uint16') return [0, 65535];
+  }
   return [0, 255];
 }
 

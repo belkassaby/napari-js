@@ -14,11 +14,17 @@ export class Renderer {
   constructor(
     private readonly device: GPUDevice,
     private readonly target: CanvasTarget,
+    private readonly features: { float32Filterable: boolean } = { float32Filterable: false },
   ) {}
 
   addLayer(layer: ImageLayer): void {
     if (this.visuals.has(layer.id)) return;
-    this.visuals.set(layer.id, new ImageVisual(this.device, this.target.format, layer));
+    this.visuals.set(
+      layer.id,
+      new ImageVisual(this.device, this.target.format, layer, {
+        float32Filterable: this.features.float32Filterable,
+      }),
+    );
   }
 
   removeLayer(id: string): void {

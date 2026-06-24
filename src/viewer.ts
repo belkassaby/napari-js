@@ -59,7 +59,9 @@ export class Viewer {
     this.ctx = await acquireDevice();
     this.target = new CanvasTarget(this.canvas, this.ctx.device);
     this.target.syncSize();
-    this.renderer = new Renderer(this.ctx.device, this.target);
+    this.renderer = new Renderer(this.ctx.device, this.target, {
+      float32Filterable: this.ctx.features.float32Filterable,
+    });
 
     // Register any layers added before the device was ready.
     for (const layer of this.model.layers) {

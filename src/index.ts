@@ -4,7 +4,7 @@
 export { Viewer } from './viewer';
 export type { ViewerOptions } from './viewer';
 export { acquireDevice, WebGPUUnsupportedError } from './engine/device';
-export type { DeviceContext } from './engine/device';
+export type { DeviceContext, DeviceFeatures } from './engine/device';
 
 // Model
 export { ViewerModel } from './scene/viewer-model';
@@ -19,6 +19,7 @@ export type { ImageLayerOptions, Interpolation } from './layers/image-layer';
 export { Colormap, resolveColormap, NAMED_COLORMAPS, GRAY, RED, GREEN, BLUE, VIRIDIS, MAGMA } from './color/colormap';
 export type { RGB, ColorStop } from './color/colormap';
 export { buildLut, LUT_SIZE } from './color/lut';
+export { windowGamma, mapScalar, additiveComposite } from './color/display-pipeline';
 
 // Data sources
 export { toTextureSource, defaultContrastLimits, isGrayscale, channelsOf } from './io/texture-source';
