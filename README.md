@@ -76,4 +76,4 @@ and published independently first.
 
 ## License
 
-TBD.
+[MIT](./LICENSE) © Baha Elkassaby
