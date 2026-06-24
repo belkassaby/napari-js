@@ -40,7 +40,7 @@ export class Viewer {
 
   private readonly canvas: HTMLCanvasElement;
   private readonly background: GPUColor;
-  private readonly useControls: boolean;
+  private controlsEnabled: boolean;
   private readonly autoResize: boolean;
 
   private ctx?: DeviceContext;
@@ -56,7 +56,7 @@ export class Viewer {
   constructor(options: ViewerOptions) {
     this.canvas = options.canvas;
     this.background = options.background ?? { r: 0.07, g: 0.07, b: 0.09, a: 1 };
-    this.useControls = options.controls ?? true;
+    this.controlsEnabled = options.controls ?? true;
     this.autoResize = options.autoResize ?? true;
     this.ready = this.init();
   }
@@ -101,10 +101,10 @@ export class Viewer {
     });
     this.model.changed.connect(() => this.requestRender());
 
-    if (this.useControls) {
-      this.installControls();
-      this.model.dims.changed.connect(() => this.installControls());
-    }
+    // Wire controls unconditionally; `installControls` honours `controlsEnabled`, so toggling
+    // it at runtime (region drawing ↔ navigation) re-attaches/detaches correctly.
+    this.installControls();
+    this.model.dims.changed.connect(() => this.installControls());
     if (this.autoResize && typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.requestRender());
       this.resizeObserver.observe(this.canvas);
@@ -143,16 +143,39 @@ export class Viewer {
     }
   }
 
-  /** Attach the 2D pan/zoom or 3D orbit controls to match `dims.ndisplay`. */
+  /** Attach the 2D pan/zoom or 3D orbit controls to match `dims.ndisplay`. Detaches and stays
+   *  detached while {@link controlsEnabled} is false (e.g. a host owns the pointer for drawing). */
   private installControls(): void {
+    if (!this.controlsEnabled) {
+      this.detachControls?.();
+      this.detachControls = undefined;
+      this.lastControlsNdisplay = undefined;
+      return;
+    }
     const nd = this.model.dims.ndisplay;
-    if (nd === this.lastControlsNdisplay) return;
+    if (nd === this.lastControlsNdisplay && this.detachControls) return;
     this.lastControlsNdisplay = nd;
     this.detachControls?.();
     this.detachControls =
       nd === 3
         ? attachOrbitControls(this.canvas, this.model.camera3d)
         : attachCameraControls(this.canvas, this.model.camera);
+  }
+
+  /**
+   * Enable or disable pointer pan/zoom (2D) / orbit (3D) controls at runtime. Disable so a host
+   * can take over the pointer for region drawing without the camera also panning/zooming; call
+   * again with `true` to restore navigation. Mirrors the `controls` constructor option.
+   */
+  setControlsEnabled(enabled: boolean): void {
+    if (this.controlsEnabled === enabled) return;
+    this.controlsEnabled = enabled;
+    this.installControls();
+  }
+
+  /** Whether pointer pan/zoom/orbit controls are currently attached. */
+  get controlsActive(): boolean {
+    return this.controlsEnabled;
   }
 
   private renderInputs(): RenderInputs {

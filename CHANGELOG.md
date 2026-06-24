@@ -3,6 +3,16 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.4.0]
+
+### Added
+
+- **Runtime control toggle** — `Viewer.setControlsEnabled(enabled)` and the `controlsActive`
+  getter attach/detach the pointer pan/zoom (2D) and orbit (3D) controls on demand. A host can
+  disable navigation so it owns the pointer for region drawing (rectangle/polygon/lasso), then
+  re-enable it to restore navigation. The `controls` constructor option is now toggleable at
+  runtime rather than fixed at construction.
+
 ## [0.3.0]
 
 ### Added
