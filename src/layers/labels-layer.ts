@@ -17,16 +17,18 @@ export interface LabelsLayerOptions {
  * image (ids 0..255; 0 = background/transparent), colored by a cyclic LUT. Sampled with
  * nearest filtering so label edges stay crisp. uint16/uint32 label support is a follow-up.
  */
+export type LabelData = Uint8Array | Uint16Array | Uint32Array;
+
 export class LabelsLayer extends Layer {
   readonly kind = 'labels';
   readonly width: number;
   readonly height: number;
-  readonly data: Uint8Array;
+  readonly data: LabelData;
 
   private _selectedLabel: number;
   private _showSelectedOnly: boolean;
 
-  constructor(data: Uint8Array, width: number, height: number, opts: LabelsLayerOptions = {}) {
+  constructor(data: LabelData, width: number, height: number, opts: LabelsLayerOptions = {}) {
     super({ name: opts.name, scale: opts.scale, translate: opts.translate });
     if (data.length < width * height) {
       throw new Error(`Labels data (${data.length}) smaller than ${width}×${height}.`);

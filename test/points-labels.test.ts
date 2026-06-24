@@ -80,6 +80,15 @@ describe('LabelsLayer.labelAt', () => {
   it('rejects undersized data', () => {
     expect(() => new LabelsLayer(new Uint8Array(3), 2, 2)).toThrow();
   });
+
+  it('accepts uint16/uint32 label images with ids > 255', () => {
+    const u16 = new Uint16Array([0, 300, 1000, 65535]);
+    const layer = new LabelsLayer(u16, 2, 2);
+    expect(layer.labelAt(1, 0)).toBe(300);
+    expect(layer.labelAt(1, 1)).toBe(65535);
+    const u32 = new Uint32Array([0, 70000]);
+    expect(new LabelsLayer(u32, 2, 1).labelAt(1, 0)).toBe(70000);
+  });
 });
 
 describe('buildLabelLut', () => {

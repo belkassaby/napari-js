@@ -18,7 +18,7 @@ export class LabelsVisual implements LayerVisual {
   private readonly scratch = new Float32Array(UNIFORM_FLOATS);
   private readonly texture: GPUTexture;
   private readonly lutTexture: GPUTexture;
-  private readonly sampler: GPUSampler;
+  private readonly lutSampler: GPUSampler;
   private readonly bindGroup: GPUBindGroup;
   private pipeline: GPURenderPipeline;
   private currentBlend: BlendMode;
@@ -34,16 +34,18 @@ export class LabelsVisual implements LayerVisual {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    // Label id texture (r8unorm, nearest — ids must not be interpolated).
+    // Label id texture (r32uint, integer-fetched — ids must not be interpolated, and uint32
+    // holds uint8/uint16/uint32 label images exactly).
     this.texture = device.createTexture({
       size: [layer.width, layer.height],
-      format: 'r8unorm',
+      format: 'r32uint',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
+    const ids = layer.data instanceof Uint32Array ? layer.data : Uint32Array.from(layer.data);
     device.queue.writeTexture(
       { texture: this.texture },
-      layer.data as GPUAllowSharedBufferSource,
-      { bytesPerRow: layer.width, rowsPerImage: layer.height },
+      ids as GPUAllowSharedBufferSource,
+      { bytesPerRow: layer.width * 4, rowsPerImage: layer.height },
       { width: layer.width, height: layer.height },
     );
 
@@ -60,7 +62,7 @@ export class LabelsVisual implements LayerVisual {
       { width: LUT_SIZE, height: 1 },
     );
 
-    this.sampler = device.createSampler({
+    this.lutSampler = device.createSampler({
       magFilter: 'nearest',
       minFilter: 'nearest',
       addressModeU: 'clamp-to-edge',
@@ -69,14 +71,14 @@ export class LabelsVisual implements LayerVisual {
 
     this.currentBlend = layer.blending;
     this.pipeline = this.buildPipeline(layer.blending);
+    // The label texture is integer-fetched (textureLoad), so it needs no sampler binding.
     this.bindGroup = device.createBindGroup({
       layout: this.pipeline.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: this.uniformBuffer } },
-        { binding: 1, resource: this.sampler },
-        { binding: 2, resource: this.texture.createView() },
-        { binding: 3, resource: this.sampler },
-        { binding: 4, resource: this.lutTexture.createView() },
+        { binding: 1, resource: this.texture.createView() },
+        { binding: 2, resource: this.lutSampler },
+        { binding: 3, resource: this.lutTexture.createView() },
       ],
     });
   }

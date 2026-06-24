@@ -28,3 +28,25 @@ export function histogramRGBA(data: Uint8ClampedArray | Uint8Array, bins: number
   }
   return { counts, bins, min: 0, max: 255 };
 }
+
+/**
+ * Histogram of scalar samples over `[min, max]` into `bins` bins (values clamped into range).
+ * Used for per-channel, native-bit-depth histograms (e.g. a uint16 image channel). Pure.
+ */
+export function histogramScalar(
+  data: ArrayLike<number>,
+  bins: number,
+  min: number,
+  max: number,
+): Histogram {
+  if (bins < 1) throw new Error('histogram bins must be >= 1.');
+  const counts = new Uint32Array(bins);
+  const range = max - min || 1;
+  for (let i = 0; i < data.length; i++) {
+    let b = Math.floor(((data[i] - min) / range) * bins);
+    if (b >= bins) b = bins - 1;
+    else if (b < 0) b = 0;
+    counts[b]++;
+  }
+  return { counts, bins, min, max };
+}

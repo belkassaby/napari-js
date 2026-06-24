@@ -8,7 +8,9 @@ A browser-native, **WebGPU** rendering engine that ports the visualization model
 > labels, and 3D volume raymarch (MIP / translucent / iso), plus readback / screenshot /
 > histogram. **v0.1.1** adds host-embedding APIs (`worldToCanvas`, `visibleWorldRect`,
 > `ResizeObserver` auto-resize), a dropdown multi-demo playground for browser verification, and
-> coverage tooling (112 unit tests). CI/CD (mirrors Cellpose.js) publishes on `vX.Y.Z` tags.
+> coverage tooling. **v0.2.0** adds device-loss recovery, uint8/16/32 labels, `ImageBitmap`
+> tile chunks, and per-channel native-bit-depth histograms (116 unit tests; see
+> [CHANGELOG](./CHANGELOG.md)). CI/CD (mirrors Cellpose.js) publishes on `vX.Y.Z` tags.
 > Next: Phase C — the `jit-ui` `IVisualizer` adapter ([docs/06](./docs/06-jit-ui-integration.md)).
 > Landscape & how this differs from other browser viewers: [docs/08](./docs/08-landscape-and-related-work.md).
 

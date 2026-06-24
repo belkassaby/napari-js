@@ -8,7 +8,7 @@ export type { DeviceContext, DeviceFeatures } from './engine/device';
 export type { PixelData } from './engine/readback';
 
 // Readback / analysis
-export { histogramRGBA, luminance8 } from './color/histogram';
+export { histogramRGBA, histogramScalar, luminance8 } from './color/histogram';
 export type { Histogram } from './color/histogram';
 
 // Model
@@ -24,7 +24,7 @@ export type { ImageLayerOptions, Interpolation } from './layers/image-layer';
 export { PointsLayer } from './layers/points-layer';
 export type { PointsLayerOptions, PointSymbol, RGBA } from './layers/points-layer';
 export { LabelsLayer } from './layers/labels-layer';
-export type { LabelsLayerOptions } from './layers/labels-layer';
+export type { LabelsLayerOptions, LabelData } from './layers/labels-layer';
 export { VolumeLayer } from './layers/volume-layer';
 export type { VolumeLayerOptions, VolumeRendering } from './layers/volume-layer';
 export { nearestPointIndex } from './picking/pick';

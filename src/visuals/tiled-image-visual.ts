@@ -164,17 +164,33 @@ export class TiledImageVisual implements LayerVisual {
       .then((chunk) => {
         this.pending.delete(key);
         if (this.disposed) return;
+        const isBitmap = typeof ImageBitmap !== 'undefined' && chunk.data instanceof ImageBitmap;
         const texture = this.device.createTexture({
           size: [chunk.width, chunk.height],
           format: this.plan.format,
-          usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+          usage:
+            GPUTextureUsage.TEXTURE_BINDING |
+            GPUTextureUsage.COPY_DST |
+            // copyExternalImageToTexture requires RENDER_ATTACHMENT.
+            (isBitmap ? GPUTextureUsage.RENDER_ATTACHMENT : 0),
         });
-        this.device.queue.writeTexture(
-          { texture },
-          toUploadData(chunk.data, this.plan.format) as GPUAllowSharedBufferSource,
-          { bytesPerRow: chunk.width * this.plan.bytesPerPixel, rowsPerImage: chunk.height },
-          { width: chunk.width, height: chunk.height },
-        );
+        if (isBitmap) {
+          this.device.queue.copyExternalImageToTexture(
+            { source: chunk.data as ImageBitmap },
+            { texture },
+            [chunk.width, chunk.height],
+          );
+        } else {
+          this.device.queue.writeTexture(
+            { texture },
+            toUploadData(
+              chunk.data as Uint8Array | Uint16Array | Float32Array,
+              this.plan.format,
+            ) as GPUAllowSharedBufferSource,
+            { bytesPerRow: chunk.width * this.plan.bytesPerPixel, rowsPerImage: chunk.height },
+            { width: chunk.width, height: chunk.height },
+          );
+        }
         const uniformBuffer = this.device.createBuffer({
           size: UNIFORM_BYTES,
           usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,

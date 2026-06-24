@@ -7,7 +7,7 @@ import type { LayerList } from './scene/layer-list';
 import { attachCameraControls } from './camera/controls';
 import { ImageLayer, type ImageLayerOptions } from './layers/image-layer';
 import { PointsLayer, type PointsLayerOptions } from './layers/points-layer';
-import { LabelsLayer, type LabelsLayerOptions } from './layers/labels-layer';
+import { LabelsLayer, type LabelsLayerOptions, type LabelData } from './layers/labels-layer';
 import { VolumeLayer, type VolumeLayerOptions } from './layers/volume-layer';
 import type { Layer } from './layers/layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
@@ -16,7 +16,7 @@ import type { Dims } from './scene/dims';
 import type { Camera3D } from './camera/camera3d';
 import { attachOrbitControls } from './camera/controls3d';
 import { readTextureToRGBA, type PixelData } from './engine/readback';
-import { histogramRGBA, type Histogram } from './color/histogram';
+import { histogramRGBA, histogramScalar, type Histogram } from './color/histogram';
 import type { RenderInputs } from './engine/renderer';
 
 export interface ViewerOptions {
@@ -51,6 +51,7 @@ export class Viewer {
   private resizeObserver?: ResizeObserver;
   private frameScheduled = false;
   private firstImageFitted = false;
+  private disposed = false;
 
   constructor(options: ViewerOptions) {
     this.canvas = options.canvas;
@@ -81,18 +82,10 @@ export class Viewer {
   }
 
   private async init(): Promise<void> {
-    this.ctx = await acquireDevice();
-    this.target = new CanvasTarget(this.canvas, this.ctx.device);
-    this.target.syncSize();
-    this.renderer = new Renderer(this.ctx.device, this.target, {
-      float32Filterable: this.ctx.features.float32Filterable,
-      onNeedsRedraw: () => this.requestRender(),
-    });
+    await this.setupGpu();
 
-    // Register any layers added before the device was ready.
-    for (const layer of this.model.layers) {
-      this.renderer.addLayer(layer);
-    }
+    // DOM/model listeners are wired once (they reference `this.renderer`, which is
+    // reassigned on device recovery, so they keep working across a device loss).
     this.model.layers.added.connect((layer) => {
       this.renderer?.addLayer(layer);
       this.requestRender();
@@ -112,6 +105,37 @@ export class Viewer {
       this.resizeObserver.observe(this.canvas);
     }
     this.requestRender();
+  }
+
+  /** Acquire the device, (re)build the canvas target + renderer, register existing layers,
+   *  and arm device-loss recovery. Run on first init and again after a device loss. */
+  private async setupGpu(): Promise<void> {
+    this.ctx = await acquireDevice();
+    this.target = new CanvasTarget(this.canvas, this.ctx.device);
+    this.target.syncSize();
+    this.renderer = new Renderer(this.ctx.device, this.target, {
+      float32Filterable: this.ctx.features.float32Filterable,
+      onNeedsRedraw: () => this.requestRender(),
+    });
+    for (const layer of this.model.layers) {
+      this.renderer.addLayer(layer);
+    }
+    void this.ctx.device.lost.then((info) => {
+      // `destroyed` = we called dispose()/destroy() ourselves — don't try to recover.
+      if (this.disposed || info.reason === 'destroyed') return;
+      console.warn(`[napari-js] WebGPU device lost (${info.reason}): ${info.message}. Recovering…`);
+      void this.recover();
+    });
+  }
+
+  /** Re-acquire the GPU and rebuild all resources after a device loss. */
+  private async recover(): Promise<void> {
+    try {
+      await this.setupGpu();
+      this.requestRender();
+    } catch (err) {
+      console.error('[napari-js] device recovery failed:', err);
+    }
   }
 
   /** Attach the 2D pan/zoom or 3D orbit controls to match `dims.ndisplay`. */
@@ -152,9 +176,9 @@ export class Viewer {
     return layer;
   }
 
-  /** Add a labels (segmentation) layer from an 8-bit id image. */
+  /** Add a labels (segmentation) layer from an integer id image (uint8/uint16/uint32). */
   addLabels(
-    data: Uint8Array,
+    data: LabelData,
     width: number,
     height: number,
     opts: LabelsLayerOptions = {},
@@ -304,7 +328,32 @@ export class Viewer {
     return histogramRGBA(px.data, bins);
   }
 
+  /**
+   * Per-channel, native-bit-depth histogram of a single-channel {@link ImageLayer} computed
+   * directly from its in-memory source data (uint8 → 0..255, uint16 → 0..65535, float32 →
+   * data min/max). Returns `null` for RGBA, tiled, or external sources (no in-memory scalars).
+   */
+  layerHistogram(layer: ImageLayer, bins = 256): Histogram | null {
+    const src = layer.source;
+    if (src.kind !== 'typed' || src.channels !== 1) return null;
+    let min: number;
+    let max: number;
+    if (src.dtype === 'uint8') [min, max] = [0, 255];
+    else if (src.dtype === 'uint16') [min, max] = [0, 65535];
+    else {
+      min = Infinity;
+      max = -Infinity;
+      for (let i = 0; i < src.data.length; i++) {
+        if (src.data[i] < min) min = src.data[i];
+        if (src.data[i] > max) max = src.data[i];
+      }
+      if (!isFinite(min)) [min, max] = [0, 1];
+    }
+    return histogramScalar(src.data, bins, min, max);
+  }
+
   dispose(): void {
+    this.disposed = true;
     this.resizeObserver?.disconnect();
     this.detachControls?.();
     this.renderer?.dispose();

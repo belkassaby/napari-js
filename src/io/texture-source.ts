@@ -37,11 +37,15 @@ export interface TileKey {
   z: number;
 }
 
-/** Pixels for one tile. Edge tiles may be smaller than the nominal `tileSize`. */
+/**
+ * Pixels for one tile. Edge tiles may be smaller than the nominal `tileSize`. `data` is
+ * either a typed array (matching the source's dtype/channels) or a decoded `ImageBitmap`
+ * (for RGBA8 sources — e.g. PNG tiles from a server uploaded directly).
+ */
 export interface PixelChunk {
   width: number;
   height: number;
-  data: Uint8Array | Uint16Array | Float32Array;
+  data: Uint8Array | Uint16Array | Float32Array | ImageBitmap;
 }
 
 /**
