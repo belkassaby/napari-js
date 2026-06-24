@@ -1,7 +1,6 @@
-import type { Camera } from '../camera/camera';
 import type { ImageLayer, Interpolation } from '../layers/image-layer';
 import type { BlendMode } from '../layers/layer';
-import type { LayerVisual } from './layer-visual';
+import type { LayerVisual, RenderView } from './layer-visual';
 import type { TiledSource } from '../io/texture-source';
 import { multiply, scaleTranslate2d } from '../math/mat4';
 import { selectLevel, visibleTiles, worldViewport, type VisibleTile } from '../io/pyramid';
@@ -29,6 +28,7 @@ interface TileEntry {
  * (cache keyed by z, so revisited slices are instant). Mirrors napari's tiled-image path.
  */
 export class TiledImageVisual implements LayerVisual {
+  readonly ndisplay = 2 as 2 | 3;
   private readonly source: TiledSource;
   private readonly plan: FormatPlan;
   private readonly module: GPUShaderModule;
@@ -212,12 +212,14 @@ export class TiledImageVisual implements LayerVisual {
     }
   }
 
-  draw(pass: GPURenderPassEncoder, camera: Camera, vw: number, vh: number, z: number): void {
+  draw(pass: GPURenderPassEncoder, rv: RenderView): void {
     const { width, height, tileSize, levels } = this.source;
-    const view = worldViewport(camera.center[0], camera.center[1], camera.zoom, vw, vh);
-    const target = selectLevel(camera.zoom, levels);
+    const cam = rv.camera2d;
+    const z = rv.z;
+    const view = worldViewport(cam.center[0], cam.center[1], cam.zoom, rv.vw, rv.vh);
+    const target = selectLevel(cam.zoom, levels);
     const mvp = multiply(
-      camera.viewProjection(vw, vh),
+      cam.viewProjection(rv.vw, rv.vh),
       scaleTranslate2d(this.layer.scale[0], this.layer.scale[1], this.layer.translate[0], this.layer.translate[1]),
     );
 

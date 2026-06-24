@@ -3,14 +3,15 @@
 A browser-native, **WebGPU** rendering engine that ports the visualization model of
 [napari](https://napari.org) (the Python multi-dimensional image viewer) to TypeScript.
 
-> **Status:** **NJ-5 complete** — Points and Labels layers. `viewer.addPoints()` renders
-> instanced SDF markers (disc/ring/square, per-point size/color, antialiased border);
-> `viewer.addLabels()` renders an 8-bit id image through a cyclic palette LUT (nearest
-> sampling, transparent background, selected-label highlight). CPU picking via
-> `nearestPointIndex` + `LabelsLayer.labelAt` + `viewer.canvasToWorld`. Builds on the v0.1
-> base (readback/screenshot/histogram). All gates green (typecheck / lint / 72 unit tests /
-> build). `npm publish` (needs registry auth) and NJ-5+ volume raycasting remain. See the
-> [roadmap](./docs/05-roadmap.md).
+> **Status:** **NJ-5+ complete — Phase B roadmap done.** Added volume rendering:
+> `viewer.addVolume()` fragment-raymarches a 3D texture (MIP / translucent DVR / iso-surface
+> with gradient shading) via a fullscreen quad + ray-box intersection in volume space; a
+> `Camera3D` orbit camera and `dims.ndisplay = 3` mode drive it (visuals are routed by
+> dimensionality). Full 3D matrix math (`perspective`/`lookAt`/`invert`) is unit-tested.
+> napari-js now spans NJ-0…NJ-5+: images (single/multi-channel/16-bit), tiled+z-stacks,
+> points, labels, volume, plus readback/screenshot/histogram. All gates green (typecheck /
+> lint / 83 unit tests / build). **Remaining:** `npm publish` (registry auth) and — when you
+> choose — Phase C, the `jit-ui` `IVisualizer` adapter ([docs/06](./docs/06-jit-ui-integration.md)).
 
 ## Quickstart
 

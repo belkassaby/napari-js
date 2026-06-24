@@ -1,11 +1,10 @@
-import type { Camera } from '../camera/camera';
 import type { ImageLayer, Interpolation } from '../layers/image-layer';
 import type { BlendMode } from '../layers/layer';
 import { multiply, scaleTranslate2d } from '../math/mat4';
 import { buildLut, LUT_SIZE } from '../color/lut';
 import { GRAY } from '../color/colormap';
 import type { TextureSource } from '../io/texture-source';
-import type { LayerVisual } from './layer-visual';
+import type { LayerVisual, RenderView } from './layer-visual';
 import { formatPlanFor, toUploadData, type FormatPlan } from './format-plan';
 import { IMAGE_COLORMAP_SHADER } from './image-colormap-shader';
 import { blendStateFor } from './blend';
@@ -35,6 +34,7 @@ function planUpload(source: TextureSource, float32Filterable: boolean): UploadPl
  * float textures render correctly when `float32-filterable` is unavailable.
  */
 export class ImageVisual implements LayerVisual {
+  readonly ndisplay = 2 as 2 | 3;
   private readonly module: GPUShaderModule;
   private readonly uniformBuffer: GPUBuffer;
   private readonly scratch = new Float32Array(UNIFORM_FLOATS);
@@ -204,8 +204,8 @@ export class ImageVisual implements LayerVisual {
     }
   }
 
-  /** Encode a draw of this layer for a `vw`×`vh` CSS-pixel viewport. (`_z` unused: single image.) */
-  draw(pass: GPURenderPassEncoder, camera: Camera, vw: number, vh: number, _z = 0): void {
+  /** Encode a draw of this layer for the current view. */
+  draw(pass: GPURenderPassEncoder, view: RenderView): void {
     const src = this.layer.source;
     const model = scaleTranslate2d(
       this.layer.scale[0],
@@ -213,7 +213,7 @@ export class ImageVisual implements LayerVisual {
       this.layer.translate[0],
       this.layer.translate[1],
     );
-    const mvp = multiply(camera.viewProjection(vw, vh), model);
+    const mvp = multiply(view.camera2d.viewProjection(view.vw, view.vh), model);
 
     const s = this.scratch;
     s.set(mvp, 0);

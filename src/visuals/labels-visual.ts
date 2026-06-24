@@ -1,7 +1,6 @@
-import type { Camera } from '../camera/camera';
 import type { LabelsLayer } from '../layers/labels-layer';
 import type { BlendMode } from '../layers/layer';
-import type { LayerVisual } from './layer-visual';
+import type { LayerVisual, RenderView } from './layer-visual';
 import { multiply, scaleTranslate2d } from '../math/mat4';
 import { buildLabelLut } from '../color/label-colormap';
 import { LABELS_SHADER } from './labels-shader';
@@ -13,6 +12,7 @@ const UNIFORM_BYTES = UNIFORM_FLOATS * 4;
 
 /** Renders a {@link LabelsLayer}: nearest-sampled id texture + cyclic palette LUT. */
 export class LabelsVisual implements LayerVisual {
+  readonly ndisplay = 2 as 2 | 3;
   private readonly module: GPUShaderModule;
   private readonly uniformBuffer: GPUBuffer;
   private readonly scratch = new Float32Array(UNIFORM_FLOATS);
@@ -96,9 +96,9 @@ export class LabelsVisual implements LayerVisual {
     }
   }
 
-  draw(pass: GPURenderPassEncoder, camera: Camera, vw: number, vh: number, _z = 0): void {
+  draw(pass: GPURenderPassEncoder, view: RenderView): void {
     const mvp = multiply(
-      camera.viewProjection(vw, vh),
+      view.camera2d.viewProjection(view.vw, view.vh),
       scaleTranslate2d(this.layer.scale[0], this.layer.scale[1], this.layer.translate[0], this.layer.translate[1]),
     );
     const s = this.scratch;

@@ -8,11 +8,15 @@ import { attachCameraControls } from './camera/controls';
 import { ImageLayer, type ImageLayerOptions } from './layers/image-layer';
 import { PointsLayer, type PointsLayerOptions } from './layers/points-layer';
 import { LabelsLayer, type LabelsLayerOptions } from './layers/labels-layer';
+import { VolumeLayer, type VolumeLayerOptions } from './layers/volume-layer';
 import type { Layer } from './layers/layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
 import type { Dims } from './scene/dims';
+import type { Camera3D } from './camera/camera3d';
+import { attachOrbitControls } from './camera/controls3d';
 import { readTextureToRGBA, type PixelData } from './engine/readback';
 import { histogramRGBA, type Histogram } from './color/histogram';
+import type { RenderInputs } from './engine/renderer';
 
 export interface ViewerOptions {
   canvas: HTMLCanvasElement;
@@ -39,6 +43,7 @@ export class Viewer {
   private target?: CanvasTarget;
   private renderer?: Renderer;
   private detachControls?: () => void;
+  private lastControlsNdisplay?: 2 | 3;
   private frameScheduled = false;
   private firstImageFitted = false;
 
@@ -59,6 +64,10 @@ export class Viewer {
 
   get dims(): Dims {
     return this.model.dims;
+  }
+
+  get camera3d(): Camera3D {
+    return this.model.camera3d;
   }
 
   get device(): GPUDevice | undefined {
@@ -89,9 +98,31 @@ export class Viewer {
     this.model.changed.connect(() => this.requestRender());
 
     if (this.useControls) {
-      this.detachControls = attachCameraControls(this.canvas, this.model.camera);
+      this.installControls();
+      this.model.dims.changed.connect(() => this.installControls());
     }
     this.requestRender();
+  }
+
+  /** Attach the 2D pan/zoom or 3D orbit controls to match `dims.ndisplay`. */
+  private installControls(): void {
+    const nd = this.model.dims.ndisplay;
+    if (nd === this.lastControlsNdisplay) return;
+    this.lastControlsNdisplay = nd;
+    this.detachControls?.();
+    this.detachControls =
+      nd === 3
+        ? attachOrbitControls(this.canvas, this.model.camera3d)
+        : attachCameraControls(this.canvas, this.model.camera);
+  }
+
+  private renderInputs(): RenderInputs {
+    return {
+      camera2d: this.model.camera,
+      camera3d: this.model.camera3d,
+      ndisplay: this.model.dims.ndisplay,
+      z: this.model.dims.z,
+    };
   }
 
   /** Add an image layer. Accepts typed pixels or a decoded image (see {@link ImageInput}). */
@@ -116,6 +147,24 @@ export class Viewer {
     const layer = new LabelsLayer(data, width, height, opts);
     this.model.layers.add(layer);
     this.maybeFitFirst(width, height);
+    return layer;
+  }
+
+  /**
+   * Add a 3D volume layer (uint8 scalar field, x-fastest). Switches the viewer to 3D
+   * (`dims.ndisplay = 3`) and frames the orbit camera on the volume.
+   */
+  addVolume(
+    data: Uint8Array,
+    width: number,
+    height: number,
+    depth: number,
+    opts: VolumeLayerOptions = {},
+  ): VolumeLayer {
+    const layer = new VolumeLayer(data, width, height, depth, opts);
+    this.model.layers.add(layer);
+    this.model.camera3d.frame(width, height, depth);
+    this.model.dims.ndisplay = 3;
     return layer;
   }
 
@@ -152,7 +201,7 @@ export class Viewer {
   private renderFrame(): void {
     if (!this.renderer || !this.target) return;
     this.target.syncSize();
-    this.renderer.render(this.model.camera, this.allLayers(), this.model.dims.z, this.background);
+    this.renderer.render(this.renderInputs(), this.allLayers(), this.background);
   }
 
   private allLayers(): readonly Layer[] {
@@ -177,7 +226,7 @@ export class Viewer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     });
     this.renderer.renderInto(
-      texture.createView(), cssW, cssH, this.model.camera, this.allLayers(), this.model.dims.z, this.background,
+      texture.createView(), this.renderInputs(), this.allLayers(), cssW, cssH, this.background,
     );
     const data = await readTextureToRGBA(this.ctx.device, texture, w, h);
     texture.destroy();

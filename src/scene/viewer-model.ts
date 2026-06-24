@@ -2,6 +2,7 @@ import { Emitter } from './events';
 import { LayerList } from './layer-list';
 import { Dims } from './dims';
 import { Camera } from '../camera/camera';
+import { Camera3D } from '../camera/camera3d';
 import type { Layer } from '../layers/layer';
 
 /**
@@ -13,6 +14,7 @@ import type { Layer } from '../layers/layer';
 export class ViewerModel {
   readonly layers = new LayerList();
   readonly camera = new Camera();
+  readonly camera3d = new Camera3D();
   readonly dims = new Dims();
   readonly changed = new Emitter<ViewerModel>();
 
@@ -21,6 +23,7 @@ export class ViewerModel {
   constructor() {
     this.layers.changed.connect(() => this.changed.emit(this));
     this.camera.changed.connect(() => this.changed.emit(this));
+    this.camera3d.changed.connect(() => this.changed.emit(this));
     this.dims.changed.connect(() => this.changed.emit(this));
     this.layers.added.connect((layer) => {
       this.layerDisposers.set(layer, layer.changed.connect(() => this.changed.emit(this)));

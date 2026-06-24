@@ -1,14 +1,25 @@
 import type { CanvasTarget } from './canvas';
 import type { Camera } from '../camera/camera';
+import type { Camera3D } from '../camera/camera3d';
 import type { Layer } from '../layers/layer';
 import { ImageLayer } from '../layers/image-layer';
 import { PointsLayer } from '../layers/points-layer';
 import { LabelsLayer } from '../layers/labels-layer';
+import { VolumeLayer } from '../layers/volume-layer';
 import { ImageVisual } from '../visuals/image-visual';
 import { TiledImageVisual } from '../visuals/tiled-image-visual';
 import { PointsVisual } from '../visuals/points-visual';
 import { LabelsVisual } from '../visuals/labels-visual';
-import type { LayerVisual } from '../visuals/layer-visual';
+import { VolumeVisual } from '../visuals/volume-visual';
+import type { LayerVisual, RenderView } from '../visuals/layer-visual';
+
+/** Camera/dims inputs the viewer hands to a render call (viewport size is filled internally). */
+export interface RenderInputs {
+  camera2d: Camera;
+  camera3d: Camera3D;
+  ndisplay: 2 | 3;
+  z: number;
+}
 
 export interface RendererOptions {
   float32Filterable: boolean;
@@ -50,6 +61,7 @@ export class Renderer {
     }
     if (layer instanceof PointsLayer) return new PointsVisual(this.device, format, layer);
     if (layer instanceof LabelsLayer) return new LabelsVisual(this.device, format, layer);
+    if (layer instanceof VolumeLayer) return new VolumeVisual(this.device, format, layer);
     return null;
   }
 
@@ -62,32 +74,39 @@ export class Renderer {
     return this.visuals.has(id);
   }
 
-  /** Draw the given layers (in order) into the swapchain for the current camera and z-slice. */
+  /** Draw the given layers (in order) into the swapchain for the current cameras/dims. */
   render(
-    camera: Camera,
+    inputs: RenderInputs,
     layers: readonly Layer[],
-    z: number,
     background: GPUColor = { r: 0.07, g: 0.07, b: 0.09, a: 1 },
   ): void {
     const vw = this.target.canvas.clientWidth || this.target.canvas.width;
     const vh = this.target.canvas.clientHeight || this.target.canvas.height;
-    this.renderInto(this.target.view, vw, vh, camera, layers, z, background);
+    this.renderInto(this.target.view, inputs, layers, vw, vh, background);
   }
 
   /**
    * Draw into an arbitrary color-attachment view. `vw`/`vh` are the CSS-pixel projection size
-   * (resolution-independent); the attachment may be a different device-pixel size. Used both
-   * for the swapchain and for offscreen readback.
+   * (resolution-independent); the attachment may be a different device-pixel size. Only
+   * visuals whose `ndisplay` matches `inputs.ndisplay` are drawn. Used for both the swapchain
+   * and offscreen readback.
    */
   renderInto(
     view: GPUTextureView,
+    inputs: RenderInputs,
+    layers: readonly Layer[],
     vw: number,
     vh: number,
-    camera: Camera,
-    layers: readonly Layer[],
-    z: number,
     background: GPUColor = { r: 0.07, g: 0.07, b: 0.09, a: 1 },
   ): void {
+    const rv: RenderView = {
+      camera2d: inputs.camera2d,
+      camera3d: inputs.camera3d,
+      vw,
+      vh,
+      z: inputs.z,
+      ndisplay: inputs.ndisplay,
+    };
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: [{ view, clearValue: background, loadOp: 'clear', storeOp: 'store' }],
@@ -95,9 +114,9 @@ export class Renderer {
     for (const layer of layers) {
       if (!layer.visible) continue;
       const visual = this.visuals.get(layer.id);
-      if (!visual) continue;
+      if (!visual || visual.ndisplay !== rv.ndisplay) continue;
       visual.sync();
-      visual.draw(pass, camera, vw, vh, z);
+      visual.draw(pass, rv);
     }
     pass.end();
     this.device.queue.submit([encoder.finish()]);

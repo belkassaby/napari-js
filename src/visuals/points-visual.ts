@@ -1,8 +1,7 @@
-import type { Camera } from '../camera/camera';
 import type { PointsLayer } from '../layers/points-layer';
 import { POINTS_INSTANCE_STRIDE } from '../layers/points-layer';
 import type { BlendMode } from '../layers/layer';
-import type { LayerVisual } from './layer-visual';
+import type { LayerVisual, RenderView } from './layer-visual';
 import { multiply, scaleTranslate2d } from '../math/mat4';
 import { POINTS_SHADER } from './points-shader';
 import { blendStateFor } from './blend';
@@ -13,6 +12,7 @@ const UNIFORM_BYTES = UNIFORM_FLOATS * 4;
 
 /** Renders a {@link PointsLayer} as instanced SDF markers. */
 export class PointsVisual implements LayerVisual {
+  readonly ndisplay = 2 as 2 | 3;
   private readonly module: GPUShaderModule;
   private readonly uniformBuffer: GPUBuffer;
   private readonly scratch = new Float32Array(UNIFORM_FLOATS);
@@ -89,10 +89,10 @@ export class PointsVisual implements LayerVisual {
     this.device.queue.writeBuffer(this.instanceBuffer, 0, data);
   }
 
-  draw(pass: GPURenderPassEncoder, camera: Camera, vw: number, vh: number, _z = 0): void {
+  draw(pass: GPURenderPassEncoder, view: RenderView): void {
     if (!this.instanceBuffer || this.layer.count === 0) return;
     const mvp = multiply(
-      camera.viewProjection(vw, vh),
+      view.camera2d.viewProjection(view.vw, view.vh),
       scaleTranslate2d(this.layer.scale[0], this.layer.scale[1], this.layer.translate[0], this.layer.translate[1]),
     );
     const s = this.scratch;
