@@ -1,6 +1,6 @@
 {
   "name": "napari-js",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "WebGPU rendering engine porting napari's visualization model to the browser.",
   "type": "module",
   "license": "MIT",
@@ -40,6 +40,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
@@ -49,6 +50,7 @@
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.44",
+    "@vitest/coverage-v8": "^2.0.5",
     "eslint": "^9.9.0",
     "prettier": "^3.8.3",
     "typescript": "^5.5.4",

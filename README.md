@@ -3,15 +3,14 @@
 A browser-native, **WebGPU** rendering engine that ports the visualization model of
 [napari](https://napari.org) (the Python multi-dimensional image viewer) to TypeScript.
 
-> **Status:** **NJ-5+ complete — Phase B roadmap done.** Added volume rendering:
-> `viewer.addVolume()` fragment-raymarches a 3D texture (MIP / translucent DVR / iso-surface
-> with gradient shading) via a fullscreen quad + ray-box intersection in volume space; a
-> `Camera3D` orbit camera and `dims.ndisplay = 3` mode drive it (visuals are routed by
-> dimensionality). Full 3D matrix math (`perspective`/`lookAt`/`invert`) is unit-tested.
-> napari-js now spans NJ-0…NJ-5+: images (single/multi-channel/16-bit), tiled+z-stacks,
-> points, labels, volume, plus readback/screenshot/histogram. All gates green (typecheck /
-> lint / 83 unit tests / build). **Remaining:** `npm publish` (registry auth) and — when you
-> choose — Phase C, the `jit-ui` `IVisualizer` adapter ([docs/06](./docs/06-jit-ui-integration.md)).
+> **Status:** **v0.1.0 published to npm** (`npm install napari-js`). Phase B roadmap
+> (NJ-0…NJ-5+) complete — images (single/multi-channel/16-bit), tiled + z-stacks, points,
+> labels, and 3D volume raymarch (MIP / translucent / iso), plus readback / screenshot /
+> histogram. **v0.1.1** adds host-embedding APIs (`worldToCanvas`, `visibleWorldRect`,
+> `ResizeObserver` auto-resize), a dropdown multi-demo playground for browser verification, and
+> coverage tooling (112 unit tests). CI/CD (mirrors Cellpose.js) publishes on `vX.Y.Z` tags.
+> Next: Phase C — the `jit-ui` `IVisualizer` adapter ([docs/06](./docs/06-jit-ui-integration.md)).
+> Landscape & how this differs from other browser viewers: [docs/08](./docs/08-landscape-and-related-work.md).
 
 ## Quickstart
 
@@ -63,16 +62,17 @@ and published independently first.
 
 ## Docs
 
-| Doc                                                                | Contents                                                                            |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| [00 — Feasibility](./docs/00-feasibility.md)                       | Why this is feasible: napari architecture findings, what ports cleanly, what's hard |
-| [01 — Architecture](./docs/01-architecture.md)                     | Engine module layout, render loop, design principles                                |
-| [02 — Public API](./docs/02-public-api.md)                         | The `Viewer` / `Layer` / `Colormap` / `TextureSource` API surface                   |
-| [03 — RenderState IR](./docs/03-render-state-ir.md)                | The serializable intermediate representation between model and GPU                  |
-| [04 — WGSL rendering plan](./docs/04-wgsl-rendering-plan.md)       | Shader pipelines: image+colormap, multi-channel compositing, future raycasting      |
-| [05 — Roadmap](./docs/05-roadmap.md)                               | Milestones NJ-0 … NJ-5+                                                             |
-| [06 — jit-ui integration](./docs/06-jit-ui-integration.md)         | Phase C: the `IVisualizer` adapter in jax-image-visualization (deferred)            |
-| [07 — napari concept mapping](./docs/07-napari-concept-mapping.md) | How each napari concept maps to napari-js                                           |
+| Doc                                                                      | Contents                                                                                |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| [00 — Feasibility](./docs/00-feasibility.md)                             | Why this is feasible: napari architecture findings, what ports cleanly, what's hard     |
+| [01 — Architecture](./docs/01-architecture.md)                           | Engine module layout, render loop, design principles                                    |
+| [02 — Public API](./docs/02-public-api.md)                               | The `Viewer` / `Layer` / `Colormap` / `TextureSource` API surface                       |
+| [03 — RenderState IR](./docs/03-render-state-ir.md)                      | The serializable intermediate representation between model and GPU                      |
+| [04 — WGSL rendering plan](./docs/04-wgsl-rendering-plan.md)             | Shader pipelines: image+colormap, multi-channel compositing, future raycasting          |
+| [05 — Roadmap](./docs/05-roadmap.md)                                     | Milestones NJ-0 … NJ-5+                                                                 |
+| [06 — jit-ui integration](./docs/06-jit-ui-integration.md)               | Phase C: the `IVisualizer` adapter in jax-image-visualization (deferred)                |
+| [07 — napari concept mapping](./docs/07-napari-concept-mapping.md)       | How each napari concept maps to napari-js                                               |
+| [08 — Landscape & related work](./docs/08-landscape-and-related-work.md) | Does a browser napari exist? CZI/roadmap WIP, Viv/vizarr/ndv, and how napari-js differs |
 
 ## Acknowledgments
 

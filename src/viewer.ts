@@ -11,6 +11,7 @@ import { LabelsLayer, type LabelsLayerOptions } from './layers/labels-layer';
 import { VolumeLayer, type VolumeLayerOptions } from './layers/volume-layer';
 import type { Layer } from './layers/layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
+import { worldViewport, type Rect } from './io/pyramid';
 import type { Dims } from './scene/dims';
 import type { Camera3D } from './camera/camera3d';
 import { attachOrbitControls } from './camera/controls3d';
@@ -24,6 +25,8 @@ export interface ViewerOptions {
   background?: GPUColor;
   /** Attach pointer/wheel pan-zoom controls (default true). */
   controls?: boolean;
+  /** Observe the canvas with a ResizeObserver and redraw on size changes (default true). */
+  autoResize?: boolean;
 }
 
 /**
@@ -38,12 +41,14 @@ export class Viewer {
   private readonly canvas: HTMLCanvasElement;
   private readonly background: GPUColor;
   private readonly useControls: boolean;
+  private readonly autoResize: boolean;
 
   private ctx?: DeviceContext;
   private target?: CanvasTarget;
   private renderer?: Renderer;
   private detachControls?: () => void;
   private lastControlsNdisplay?: 2 | 3;
+  private resizeObserver?: ResizeObserver;
   private frameScheduled = false;
   private firstImageFitted = false;
 
@@ -51,6 +56,7 @@ export class Viewer {
     this.canvas = options.canvas;
     this.background = options.background ?? { r: 0.07, g: 0.07, b: 0.09, a: 1 };
     this.useControls = options.controls ?? true;
+    this.autoResize = options.autoResize ?? true;
     this.ready = this.init();
   }
 
@@ -100,6 +106,10 @@ export class Viewer {
     if (this.useControls) {
       this.installControls();
       this.model.dims.changed.connect(() => this.installControls());
+    }
+    if (this.autoResize && typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.requestRender());
+      this.resizeObserver.observe(this.canvas);
     }
     this.requestRender();
   }
@@ -181,6 +191,28 @@ export class Viewer {
     const { zoom } = this.model.camera;
     const [cx, cy] = this.model.camera.center;
     return [cx + px / zoom, cy + py / zoom];
+  }
+
+  /** Inverse of {@link canvasToWorld}: data/world coords → canvas client coords. Lets a host
+   *  position an overlay (e.g. region polygons) over the rendered canvas. */
+  worldToCanvas(worldX: number, worldY: number): [number, number] {
+    const rect = this.canvas.getBoundingClientRect();
+    const { zoom } = this.model.camera;
+    const [cx, cy] = this.model.camera.center;
+    return [
+      rect.left + rect.width / 2 + (worldX - cx) * zoom,
+      rect.top + rect.height / 2 + (worldY - cy) * zoom,
+    ];
+  }
+
+  /** The data/world rectangle currently visible (2D), in data coordinates. A host can clamp
+   *  this to the image bounds to obtain the displayed source rect. */
+  visibleWorldRect(): Rect {
+    const vw = this.canvas.clientWidth || this.canvas.width || 1;
+    const vh = this.canvas.clientHeight || this.canvas.height || 1;
+    const { zoom } = this.model.camera;
+    const [cx, cy] = this.model.camera.center;
+    return worldViewport(cx, cy, zoom, vw, vh);
   }
 
   private maybeFitFirst(width: number, height: number): void {
@@ -273,6 +305,7 @@ export class Viewer {
   }
 
   dispose(): void {
+    this.resizeObserver?.disconnect();
     this.detachControls?.();
     this.renderer?.dispose();
     this.ctx?.device.destroy();
