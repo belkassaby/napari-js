@@ -1,8 +1,9 @@
 import type { Camera3D } from './camera3d';
 
 /**
- * Attach orbit controls to a canvas: drag rotates (azimuth/elevation), wheel dollies in/out.
- * Returns a detach function.
+ * Attach orbit controls to a canvas. A pointer drag does `camera.dragMode` — rotate
+ * (azimuth/elevation), pan (translate the target), or zoom (dolly) — and the wheel always
+ * dollies. Returns a detach function.
  */
 export function attachOrbitControls(canvas: HTMLCanvasElement, camera: Camera3D): () => void {
   let dragging = false;
@@ -22,7 +23,13 @@ export function attachOrbitControls(canvas: HTMLCanvasElement, camera: Camera3D)
     const dy = e.clientY - lastY;
     lastX = e.clientX;
     lastY = e.clientY;
-    camera.orbit(-dx * 0.01, -dy * 0.01);
+    if (camera.dragMode === 'pan') {
+      camera.pan(dx, dy, canvas.clientHeight || canvas.height || 1);
+    } else if (camera.dragMode === 'zoom') {
+      camera.zoomBy(Math.exp(dy * 0.005));
+    } else {
+      camera.orbit(-dx * 0.01, -dy * 0.01);
+    }
   };
 
   const onPointerUp = (e: PointerEvent): void => {

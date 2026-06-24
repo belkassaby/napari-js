@@ -17,6 +17,7 @@ export { LayerList } from './scene/layer-list';
 export { Dims } from './scene/dims';
 export { Camera } from './camera/camera';
 export { Camera3D } from './camera/camera3d';
+export type { CameraDragMode } from './camera/camera3d';
 export { Layer } from './layers/layer';
 export type { BlendMode } from './layers/layer';
 export { ImageLayer } from './layers/image-layer';

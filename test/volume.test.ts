@@ -39,6 +39,27 @@ describe('Camera3D', () => {
     c.distance = -2;
     expect(c.distance).toBeGreaterThan(0);
   });
+
+  it('defaults dragMode to rotate and lets it be switched', () => {
+    const c = new Camera3D();
+    expect(c.dragMode).toBe('rotate');
+    c.dragMode = 'pan';
+    expect(c.dragMode).toBe('pan');
+  });
+
+  it('pan moves the target in the view plane and emits changed', () => {
+    const c = new Camera3D();
+    c.azimuth = 0;
+    c.elevation = 0;
+    c.distance = 10; // eye on +z, looking -z
+    let n = 0;
+    c.changed.connect(() => n++);
+    const before = c.target;
+    c.pan(100, 0, 600); // horizontal drag → target shifts along x
+    const after = c.target;
+    expect(after[0]).not.toBeCloseTo(before[0], 3);
+    expect(n).toBe(1);
+  });
 });
 
 describe('VolumeLayer', () => {

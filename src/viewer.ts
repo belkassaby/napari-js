@@ -13,7 +13,7 @@ import type { Layer } from './layers/layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
 import { worldViewport, type Rect } from './io/pyramid';
 import type { Dims } from './scene/dims';
-import type { Camera3D } from './camera/camera3d';
+import type { Camera3D, CameraDragMode } from './camera/camera3d';
 import { attachOrbitControls } from './camera/controls3d';
 import { readTextureToRGBA, type PixelData } from './engine/readback';
 import { histogramRGBA, histogramScalar, type Histogram } from './color/histogram';
@@ -75,6 +75,11 @@ export class Viewer {
 
   get camera3d(): Camera3D {
     return this.model.camera3d;
+  }
+
+  /** Set what a pointer drag does in 3D: 'rotate' (default), 'pan', or 'zoom' (dolly). */
+  setCameraDragMode(mode: CameraDragMode): void {
+    this.model.camera3d.dragMode = mode;
   }
 
   get device(): GPUDevice | undefined {

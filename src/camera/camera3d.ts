@@ -4,9 +4,13 @@ import { perspective, lookAt, multiply, type Mat4, type Vec3 } from '../math/mat
 const HALF_PI = Math.PI / 2;
 const EPS = 1e-3;
 
+/** How a pointer drag manipulates the 3D camera. */
+export type CameraDragMode = 'rotate' | 'pan' | 'zoom';
+
 /**
  * Orbit camera for 3D (volume) rendering: spins around `target` at `distance`, parameterized
- * by `azimuth`/`elevation`. Produces a perspective view-projection. Emits {@link changed} on
+ * by `azimuth`/`elevation`. Produces a perspective view-projection. A pointer drag does
+ * {@link dragMode} (rotate / pan / dolly); the wheel always dollies. Emits {@link changed} on
  * mutation. Used when `dims.ndisplay === 3`.
  */
 export class Camera3D {
@@ -15,6 +19,8 @@ export class Camera3D {
   azimuth = 0.7;
   elevation = 0.5;
   fov = (45 * Math.PI) / 180;
+  /** What a pointer drag does. The host UI can switch this (rotate/pan/zoom). */
+  dragMode: CameraDragMode = 'rotate';
 
   private _distance = 3;
   private _target: [number, number, number] = [0, 0, 0];
@@ -46,6 +52,32 @@ export class Camera3D {
     this.distance = this._distance * factor;
   }
 
+  /**
+   * Pan the target in the camera's view plane by screen-pixel deltas (drag). `viewportHeight`
+   * sets the world-per-pixel scale at the target depth so panning tracks the cursor.
+   */
+  pan(dxScreen: number, dyScreen: number, viewportHeight: number): void {
+    const worldPerPx = (2 * this._distance * Math.tan(this.fov / 2)) / Math.max(viewportHeight, 1);
+    const eye = this.eye();
+    // Orthonormal camera basis (forward, right, up).
+    const f = normalize([
+      this._target[0] - eye[0],
+      this._target[1] - eye[1],
+      this._target[2] - eye[2],
+    ]);
+    const r = normalize(cross(f, [0, 1, 0]));
+    const u = cross(r, f);
+    // Drag right → content right (target left); drag down → content down (target up).
+    const sx = -dxScreen * worldPerPx;
+    const sy = dyScreen * worldPerPx;
+    this._target = [
+      this._target[0] + r[0] * sx + u[0] * sy,
+      this._target[1] + r[1] * sx + u[1] * sy,
+      this._target[2] + r[2] * sx + u[2] * sy,
+    ];
+    this.changed.emit(this);
+  }
+
   /** Eye position in world space. */
   eye(): [number, number, number] {
     const ce = Math.cos(this.elevation);
@@ -75,4 +107,13 @@ export class Camera3D {
 
 function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
+}
+
+type V3 = [number, number, number];
+function cross(a: V3, b: V3): V3 {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+function normalize(a: V3): V3 {
+  const len = Math.hypot(a[0], a[1], a[2]) || 1;
+  return [a[0] / len, a[1] / len, a[2] / len];
 }

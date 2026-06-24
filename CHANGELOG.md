@@ -3,6 +3,16 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.3.0]
+
+### Added
+
+- **3D camera drag modes** — `Camera3D.dragMode` (`'rotate'` | `'pan'` | `'zoom'`) plus
+  `Camera3D.pan(dx, dy, viewportHeight)`; the orbit controls branch a pointer drag accordingly
+  (the wheel still always dollies). `Viewer.setCameraDragMode(mode)` lets a host switch it
+  (e.g. orbit / pan / zoom toolbar buttons). Enables interactive volume navigation beyond
+  orbit-only.
+
 ## [0.2.1]
 
 ### Changed
