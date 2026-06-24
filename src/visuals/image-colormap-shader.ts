@@ -5,7 +5,7 @@ export const IMAGE_COLORMAP_SHADER = /* wgsl */ `
 struct U {
   mvp : mat4x4<f32>,
   imageSize : vec2<f32>,
-  _pad : vec2<f32>,
+  origin : vec2<f32>,   // data-space origin of this quad (0 for a full image; tile origin for tiles)
   params : vec4<f32>,   // climLo, climHi, gamma, opacity   (clim already normalized to sample space)
   flags : vec4<f32>,    // isRgba, invert, 0, 0
 };
@@ -29,7 +29,7 @@ fn vs(@builtin(vertex_index) vi : u32) -> VSOut {
   );
   let c = corners[vi];
   var out : VSOut;
-  out.position = u.mvp * vec4<f32>(c * u.imageSize, 0.0, 1.0);
+  out.position = u.mvp * vec4<f32>(u.origin + c * u.imageSize, 0.0, 1.0);
   out.uv = c;
   return out;
 }

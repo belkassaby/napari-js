@@ -6,7 +6,8 @@ import type { Camera } from './camera/camera';
 import type { LayerList } from './scene/layer-list';
 import { attachCameraControls } from './camera/controls';
 import { ImageLayer, type ImageLayerOptions } from './layers/image-layer';
-import { toTextureSource, type ImageInput } from './io/texture-source';
+import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
+import type { Dims } from './scene/dims';
 
 export interface ViewerOptions {
   canvas: HTMLCanvasElement;
@@ -51,6 +52,10 @@ export class Viewer {
     return this.model.layers;
   }
 
+  get dims(): Dims {
+    return this.model.dims;
+  }
+
   get device(): GPUDevice | undefined {
     return this.ctx?.device;
   }
@@ -61,6 +66,7 @@ export class Viewer {
     this.target.syncSize();
     this.renderer = new Renderer(this.ctx.device, this.target, {
       float32Filterable: this.ctx.features.float32Filterable,
+      onNeedsRedraw: () => this.requestRender(),
     });
 
     // Register any layers added before the device was ready.
@@ -88,6 +94,7 @@ export class Viewer {
     const source = toTextureSource(input);
     const layer = new ImageLayer(source, opts);
     this.model.layers.add(layer);
+    this.model.dims.depth = Math.max(this.model.dims.depth, depthOf(source));
     this.maybeFitFirst(source.width, source.height);
     return layer;
   }
@@ -118,7 +125,7 @@ export class Viewer {
     const layers = this.model.layers.items.filter(
       (l): l is ImageLayer => l instanceof ImageLayer,
     );
-    this.renderer.render(this.model.camera, layers, this.background);
+    this.renderer.render(this.model.camera, layers, this.model.dims.z, this.background);
   }
 
   dispose(): void {

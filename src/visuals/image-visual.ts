@@ -5,39 +5,26 @@ import { multiply, scaleTranslate2d } from '../math/mat4';
 import { buildLut, LUT_SIZE } from '../color/lut';
 import { GRAY } from '../color/colormap';
 import type { TextureSource } from '../io/texture-source';
+import type { LayerVisual } from './layer-visual';
+import { formatPlanFor, toUploadData, type FormatPlan } from './format-plan';
 import { IMAGE_COLORMAP_SHADER } from './image-colormap-shader';
 import { blendStateFor } from './blend';
 
 const UNIFORM_FLOATS = 28; // 112 bytes: mat4(16) + vec2+pad(4) + vec4(4) + vec4(4)
 const UNIFORM_BYTES = UNIFORM_FLOATS * 4;
 
-/** How a source maps onto a GPU texture: format, byte stride, filterability, clim scaling. */
-interface UploadPlan {
-  format: GPUTextureFormat;
-  bytesPerPixel: number;
-  /** Whether the texture can be linearly filtered (drives sampler + bind-group layout). */
-  filterable: boolean;
-  /** Factor applied to contrast limits so they match the shader's sample space. */
-  sampleScale: number;
-  isRgba: boolean;
-  /** Typed-array bytes to upload (null for external images copied via copyExternalImage). */
-  data: Uint8Array | Uint16Array | Float32Array | null;
-}
+/** A {@link FormatPlan} plus the bytes to upload (null = external image via copyExternalImage). */
+type UploadPlan = FormatPlan & { data: Uint8Array | Uint16Array | Float32Array | null };
 
 function planUpload(source: TextureSource, float32Filterable: boolean): UploadPlan {
   if (source.kind === 'external') {
     return { format: 'rgba8unorm', bytesPerPixel: 4, filterable: true, sampleScale: 1 / 255, isRgba: true, data: null };
   }
-  if (source.channels === 4) {
-    return { format: 'rgba8unorm', bytesPerPixel: 4, filterable: true, sampleScale: 1 / 255, isRgba: true, data: source.data };
+  if (source.kind === 'tiled') {
+    throw new Error('ImageVisual does not render tiled sources; use TiledImageVisual.');
   }
-  // Single-channel scalar.
-  if (source.dtype === 'uint8') {
-    return { format: 'r8unorm', bytesPerPixel: 1, filterable: true, sampleScale: 1 / 255, isRgba: false, data: source.data };
-  }
-  // uint16 / float32 → r32float (exact native-precision values; clim in data units).
-  const data = source.dtype === 'uint16' ? Float32Array.from(source.data) : source.data;
-  return { format: 'r32float', bytesPerPixel: 4, filterable: float32Filterable, sampleScale: 1, isRgba: false, data };
+  const plan = formatPlanFor(source.channels, source.dtype, float32Filterable);
+  return { ...plan, data: toUploadData(source.data, plan.format) };
 }
 
 /**
@@ -47,7 +34,7 @@ function planUpload(source: TextureSource, float32Filterable: boolean): UploadPl
  * (r32float, native-precision windowing). Uses an explicit bind-group layout so unfilterable
  * float textures render correctly when `float32-filterable` is unavailable.
  */
-export class ImageVisual {
+export class ImageVisual implements LayerVisual {
   private readonly module: GPUShaderModule;
   private readonly uniformBuffer: GPUBuffer;
   private readonly scratch = new Float32Array(UNIFORM_FLOATS);
@@ -217,8 +204,8 @@ export class ImageVisual {
     }
   }
 
-  /** Encode a draw of this layer for a `vw`×`vh` CSS-pixel viewport. */
-  draw(pass: GPURenderPassEncoder, camera: Camera, vw: number, vh: number): void {
+  /** Encode a draw of this layer for a `vw`×`vh` CSS-pixel viewport. (`_z` unused: single image.) */
+  draw(pass: GPURenderPassEncoder, camera: Camera, vw: number, vh: number, _z = 0): void {
     const src = this.layer.source;
     const model = scaleTranslate2d(
       this.layer.scale[0],

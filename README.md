@@ -3,13 +3,13 @@
 A browser-native, **WebGPU** rendering engine that ports the visualization model of
 [napari](https://napari.org) (the Python multi-dimensional image viewer) to TypeScript.
 
-> **Status:** **NJ-2 complete** — multi-channel additive compositing on the GPU (one
-> `ImageLayer` per channel, per-channel colormap/contrast, `additive`/`translucent`/`minimum`
-> blend), plus **16-bit & float32** support via `r32float` with native-unit windowing
-> (`float32-filterable` requested when available; nearest fallback otherwise). A CPU reference
-> (`windowGamma`/`additiveComposite`) pins the shader math. Built on NJ-1's headless model,
-> `image-colormap` pipeline, and 2D pan/zoom camera. All gates green (typecheck / lint /
-> 38 unit tests / build). Next: **NJ-3** — tiled/pyramidal large images + z-stacks. See the
+> **Status:** **NJ-3 complete** — tiled/pyramidal large images + z-stacks. A `TiledSource`
+> (`fetchTile(level,col,row,z)`) renders multi-gigapixel images via level-of-detail
+> selection, an LRU GPU-tile cache, a coarse base underlay (no blank flashes), and async
+> progressive loading; a `Dims` model drives z-scrubbing (slices cached by z). Builds on
+> NJ-1/NJ-2 (model, `image-colormap` pipeline, multi-channel + 16-bit). Pure pyramid/LRU/dims
+> logic is unit-tested. All gates green (typecheck / lint / 57 unit tests / build). Next:
+> **NJ-4** — pixel readback, screenshot, histogram, and the v0.1 npm publish. See the
 > [roadmap](./docs/05-roadmap.md); design rationale lives in [`docs/`](./docs).
 
 ## Quickstart

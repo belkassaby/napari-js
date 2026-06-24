@@ -1,38 +1,50 @@
-import { Viewer, VERSION, type TypedImageSource } from '../src/index';
+import { Viewer, VERSION, levelDims, levelScale, type TiledSource, type TileKey, type PixelChunk } from '../src/index';
 
-const W = 512;
-const H = 512;
+// A synthetic "multi-gigapixel" pyramidal, z-stacked source generated on the fly. fetchTile
+// renders a coordinate/checker pattern per tile so we can exercise tiling + LOD + z-scrub
+// without any real data or server.
+const FULL = 16384;
+const TILE = 256;
+const LEVELS = 7; // 16384 → 256 at the coarsest level
+const DEPTH = 8;
 
-/** An 8-bit Gaussian blob channel — stands in for one fluorescence channel. */
-function blob(cx: number, cy: number, sigma: number): TypedImageSource {
-  const data = new Uint8Array(W * H);
-  const s2 = 2 * sigma * sigma;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const d2 = (x - cx) * (x - cx) + (y - cy) * (y - cy);
-      data[y * W + x] = Math.round(255 * Math.exp(-d2 / s2));
+function fetchTile({ level, col, row, z }: TileKey): Promise<PixelChunk> {
+  const dims = levelDims(FULL, FULL, level);
+  const w = Math.min(TILE, dims.width - col * TILE);
+  const h = Math.min(TILE, dims.height - row * TILE);
+  const s = levelScale(level);
+  const data = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Global level-0 coordinates of this texel.
+      const gx = (col * TILE + x) * s;
+      const gy = (row * TILE + y) * s;
+      const checker = (((gx >> 9) + (gy >> 9)) & 1) === 0 ? 90 : 30;
+      const rings = 60 * (0.5 + 0.5 * Math.sin((gx + gy) / (400 + z * 120)));
+      data[y * w + x] = Math.min(255, checker + rings);
     }
   }
-  return { kind: 'typed', width: W, height: H, channels: 1, dtype: 'uint8', data };
+  // Simulate async latency so LOD/progressive loading is visible.
+  return new Promise((resolve) => setTimeout(() => resolve({ width: w, height: h, data }), 8));
 }
 
-/** A 16-bit ramp channel — exercises the r32float / native-windowing path. */
-function ramp16(): TypedImageSource {
-  const data = new Uint16Array(W * H);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      data[y * W + x] = Math.round((x / (W - 1)) * 65535);
-    }
-  }
-  return { kind: 'typed', width: W, height: H, channels: 1, dtype: 'uint16', data };
-}
+const source: TiledSource = {
+  kind: 'tiled',
+  width: FULL,
+  height: FULL,
+  tileSize: TILE,
+  levels: LEVELS,
+  depth: DEPTH,
+  channels: 1,
+  dtype: 'uint8',
+  fetchTile,
+};
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const msg = document.getElementById('msg') as HTMLDivElement;
 
 async function main(): Promise<void> {
-  // Black background so the additive composite is pure.
-  const viewer = new Viewer({ canvas, background: { r: 0, g: 0, b: 0, a: 1 } });
+  const viewer = new Viewer({ canvas });
   try {
     await viewer.ready;
   } catch (err) {
@@ -40,29 +52,17 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Three additive channels (R/G/B) — a multi-channel fluorescence composite on the GPU.
-  viewer.addImage(blob(W * 0.4, H * 0.45, 90), { colormap: 'red', blending: 'additive', name: 'ch0' });
-  viewer.addImage(blob(W * 0.6, H * 0.45, 90), { colormap: 'green', blending: 'additive', name: 'ch1' });
-  viewer.addImage(blob(W * 0.5, H * 0.62, 90), { colormap: 'blue', blending: 'additive', name: 'ch2' });
+  viewer.addImage(source, { colormap: 'viridis', contrastLimits: [0, 255] });
 
-  // A faint 16-bit ramp on top (additive), windowed to its upper half.
-  const ramp = viewer.addImage(ramp16(), {
-    colormap: 'gray',
-    blending: 'additive',
-    opacity: 0.25,
-    contrastLimits: [32768, 65535],
-    name: 'ramp16',
-  });
+  const help = 'drag = pan · wheel = zoom (LOD) · ↑/↓ = z-slice';
+  const status = (): string => `napari-js ${VERSION} — NJ-3 tiled ${FULL}² · z ${viewer.dims.z}/${DEPTH - 1} · ${help}`;
+  msg.textContent = status();
 
-  const help = 'drag = pan · wheel = zoom · w = widen/narrow 16-bit window';
-  msg.textContent = `napari-js ${VERSION} — NJ-2 multi-channel additive · ${help}`;
-
-  let wide = true;
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'w') {
-      wide = !wide;
-      ramp.contrastLimits = wide ? [0, 65535] : [49152, 65535];
-    }
+    if (e.key === 'ArrowUp') viewer.dims.z += 1;
+    else if (e.key === 'ArrowDown') viewer.dims.z -= 1;
+    else return;
+    msg.textContent = status();
   });
   window.addEventListener('resize', () => viewer.requestRender());
 }

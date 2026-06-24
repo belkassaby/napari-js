@@ -27,13 +27,58 @@ export interface ExternalImageSource {
   readonly image: ImageBitmap | HTMLCanvasElement | OffscreenCanvas | HTMLImageElement;
 }
 
-export type TextureSource = TypedImageSource | ExternalImageSource;
+/** Identifies one tile within a pyramidal/tiled source. */
+export interface TileKey {
+  /** Pyramid level (0 = full resolution; each level halves resolution). */
+  level: number;
+  col: number;
+  row: number;
+  /** Z-slice (0 when not a stack). */
+  z: number;
+}
+
+/** Pixels for one tile. Edge tiles may be smaller than the nominal `tileSize`. */
+export interface PixelChunk {
+  width: number;
+  height: number;
+  data: Uint8Array | Uint16Array | Float32Array;
+}
+
+/**
+ * A pyramidal, tiled, optionally z-stacked image — the general large-image case (whole-slide
+ * microscopy etc.). `width`/`height` are full-resolution (level 0). Tiles are fetched lazily
+ * via {@link fetchTile} and cached on the GPU. The host supplies `fetchTile` (e.g. a server
+ * `/tile` request); napari-js stays ignorant of any backend.
+ */
+export interface TiledSource {
+  readonly kind: 'tiled';
+  readonly width: number;
+  readonly height: number;
+  readonly tileSize: number;
+  readonly levels: number;
+  readonly depth: number;
+  readonly channels: 1 | 4;
+  readonly dtype: PixelDtype;
+  fetchTile(key: TileKey): Promise<PixelChunk>;
+}
+
+export type TextureSource = TypedImageSource | ExternalImageSource | TiledSource;
 
 /** Anything `Viewer.addImage` accepts. */
-export type ImageInput = TypedImageSource | ImageBitmap | HTMLCanvasElement | HTMLImageElement;
+export type ImageInput =
+  | TypedImageSource
+  | TiledSource
+  | ImageBitmap
+  | HTMLCanvasElement
+  | HTMLImageElement;
 
 export function channelsOf(source: TextureSource): 1 | 4 {
-  return source.kind === 'typed' ? source.channels : 4;
+  return source.kind === 'typed' || source.kind === 'tiled' ? source.channels : 4;
+}
+
+/** Number of z-slices in a source (1 unless it's a z-stacked tiled source). */
+export function depthOf(source: TextureSource): number {
+  return source.kind === 'tiled' ? source.depth : 1;
 }
 
 export function isGrayscale(source: TextureSource): boolean {
@@ -42,7 +87,7 @@ export function isGrayscale(source: TextureSource): boolean {
 
 /** Default contrast-limit window for a source, in source-data units. */
 export function defaultContrastLimits(source: TextureSource): [number, number] {
-  if (source.kind === 'typed') {
+  if (source.kind === 'typed' || source.kind === 'tiled') {
     if (source.dtype === 'float32') return [0, 1];
     if (source.dtype === 'uint16') return [0, 65535];
   }
@@ -51,7 +96,7 @@ export function defaultContrastLimits(source: TextureSource): [number, number] {
 
 /** Normalize a user input into a {@link TextureSource}. */
 export function toTextureSource(input: ImageInput): TextureSource {
-  if (typeof input === 'object' && 'kind' in input && input.kind === 'typed') {
+  if (typeof input === 'object' && 'kind' in input && (input.kind === 'typed' || input.kind === 'tiled')) {
     return input;
   }
   const image = input as ImageBitmap | HTMLCanvasElement | HTMLImageElement;

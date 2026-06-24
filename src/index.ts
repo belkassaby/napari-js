@@ -9,6 +9,7 @@ export type { DeviceContext, DeviceFeatures } from './engine/device';
 // Model
 export { ViewerModel } from './scene/viewer-model';
 export { LayerList } from './scene/layer-list';
+export { Dims } from './scene/dims';
 export { Camera } from './camera/camera';
 export { Layer } from './layers/layer';
 export type { BlendMode } from './layers/layer';
@@ -22,7 +23,15 @@ export { buildLut, LUT_SIZE } from './color/lut';
 export { windowGamma, mapScalar, additiveComposite } from './color/display-pipeline';
 
 // Data sources
-export { toTextureSource, defaultContrastLimits, isGrayscale, channelsOf } from './io/texture-source';
-export type { TextureSource, TypedImageSource, ExternalImageSource, ImageInput, PixelDtype } from './io/texture-source';
+export { toTextureSource, defaultContrastLimits, isGrayscale, channelsOf, depthOf } from './io/texture-source';
+export type {
+  TextureSource, TypedImageSource, ExternalImageSource, TiledSource,
+  TileKey, PixelChunk, ImageInput, PixelDtype,
+} from './io/texture-source';
+
+// Pyramid / tiling helpers
+export { selectLevel, levelScale, levelDims, tileGrid, visibleTiles, worldViewport } from './io/pyramid';
+export type { Rect, VisibleTile } from './io/pyramid';
+export { LruCache } from './cache/lru';
 
 export { VERSION } from './version';
