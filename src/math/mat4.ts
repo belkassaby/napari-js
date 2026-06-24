@@ -79,15 +79,26 @@ export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
   let sy = f[2] * up[0] - f[0] * up[2];
   let sz = f[0] * up[1] - f[1] * up[0];
   rl = 1 / Math.hypot(sx, sy, sz);
-  sx *= rl; sy *= rl; sz *= rl;
+  sx *= rl;
+  sy *= rl;
+  sz *= rl;
   // u = s × f
   const ux = sy * f[2] - sz * f[1];
   const uy = sz * f[0] - sx * f[2];
   const uz = sx * f[1] - sy * f[0];
   const m = new Float32Array(16);
-  m[0] = sx; m[1] = ux; m[2] = -f[0]; m[3] = 0;
-  m[4] = sy; m[5] = uy; m[6] = -f[1]; m[7] = 0;
-  m[8] = sz; m[9] = uz; m[10] = -f[2]; m[11] = 0;
+  m[0] = sx;
+  m[1] = ux;
+  m[2] = -f[0];
+  m[3] = 0;
+  m[4] = sy;
+  m[5] = uy;
+  m[6] = -f[1];
+  m[7] = 0;
+  m[8] = sz;
+  m[9] = uz;
+  m[10] = -f[2];
+  m[11] = 0;
   m[12] = -(sx * eye[0] + sy * eye[1] + sz * eye[2]);
   m[13] = -(ux * eye[0] + uy * eye[1] + uz * eye[2]);
   m[14] = f[0] * eye[0] + f[1] * eye[1] + f[2] * eye[2];
@@ -97,10 +108,22 @@ export function lookAt(eye: Vec3, center: Vec3, up: Vec3): Mat4 {
 
 /** Inverse of a 4×4 matrix (column-major). Returns the identity if singular. */
 export function invert(a: Mat4): Mat4 {
-  const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
-  const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
-  const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
-  const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+  const a00 = a[0],
+    a01 = a[1],
+    a02 = a[2],
+    a03 = a[3];
+  const a10 = a[4],
+    a11 = a[5],
+    a12 = a[6],
+    a13 = a[7];
+  const a20 = a[8],
+    a21 = a[9],
+    a22 = a[10],
+    a23 = a[11];
+  const a30 = a[12],
+    a31 = a[13],
+    a32 = a[14],
+    a33 = a[15];
   const b00 = a00 * a11 - a01 * a10;
   const b01 = a00 * a12 - a02 * a10;
   const b02 = a00 * a13 - a03 * a10;

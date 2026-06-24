@@ -94,7 +94,9 @@ export function resolveColormap(cmap: Colormap | string): Colormap {
   if (cmap instanceof Colormap) return cmap;
   const found = NAMED_COLORMAPS[cmap.toLowerCase()];
   if (!found) {
-    throw new Error(`Unknown colormap "${cmap}". Known: ${Object.keys(NAMED_COLORMAPS).join(', ')}.`);
+    throw new Error(
+      `Unknown colormap "${cmap}". Known: ${Object.keys(NAMED_COLORMAPS).join(', ')}.`,
+    );
   }
   return found;
 }

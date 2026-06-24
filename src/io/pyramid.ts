@@ -22,7 +22,11 @@ export function levelScale(level: number): number {
 }
 
 /** Pixel dimensions of a pyramid level. */
-export function levelDims(width: number, height: number, level: number): { width: number; height: number } {
+export function levelDims(
+  width: number,
+  height: number,
+  level: number,
+): { width: number; height: number } {
   const s = levelScale(level);
   return { width: Math.max(1, Math.ceil(width / s)), height: Math.max(1, Math.ceil(height / s)) };
 }

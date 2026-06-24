@@ -36,7 +36,7 @@ napari's model: a `Viewer` holding a list of `Layer`s (Image, later Points / Lab
 Volume), each with its own colormap (LUT), contrast limits, gamma, opacity, and blending.
 
 It is **not** a port of napari's Python code or its Qt GUI. It is a faithful port of
-napari's *rendering concepts* — the layer→visual model, per-layer GPU colormapping,
+napari's _rendering concepts_ — the layer→visual model, per-layer GPU colormapping,
 serializable transforms and camera — onto WebGPU and WGSL. See
 [`docs/07-napari-concept-mapping.md`](./docs/07-napari-concept-mapping.md).
 
@@ -63,16 +63,16 @@ and published independently first.
 
 ## Docs
 
-| Doc | Contents |
-|-----|----------|
-| [00 — Feasibility](./docs/00-feasibility.md) | Why this is feasible: napari architecture findings, what ports cleanly, what's hard |
-| [01 — Architecture](./docs/01-architecture.md) | Engine module layout, render loop, design principles |
-| [02 — Public API](./docs/02-public-api.md) | The `Viewer` / `Layer` / `Colormap` / `TextureSource` API surface |
-| [03 — RenderState IR](./docs/03-render-state-ir.md) | The serializable intermediate representation between model and GPU |
-| [04 — WGSL rendering plan](./docs/04-wgsl-rendering-plan.md) | Shader pipelines: image+colormap, multi-channel compositing, future raycasting |
-| [05 — Roadmap](./docs/05-roadmap.md) | Milestones NJ-0 … NJ-5+ |
-| [06 — jit-ui integration](./docs/06-jit-ui-integration.md) | Phase C: the `IVisualizer` adapter in jax-image-visualization (deferred) |
-| [07 — napari concept mapping](./docs/07-napari-concept-mapping.md) | How each napari concept maps to napari-js |
+| Doc                                                                | Contents                                                                            |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| [00 — Feasibility](./docs/00-feasibility.md)                       | Why this is feasible: napari architecture findings, what ports cleanly, what's hard |
+| [01 — Architecture](./docs/01-architecture.md)                     | Engine module layout, render loop, design principles                                |
+| [02 — Public API](./docs/02-public-api.md)                         | The `Viewer` / `Layer` / `Colormap` / `TextureSource` API surface                   |
+| [03 — RenderState IR](./docs/03-render-state-ir.md)                | The serializable intermediate representation between model and GPU                  |
+| [04 — WGSL rendering plan](./docs/04-wgsl-rendering-plan.md)       | Shader pipelines: image+colormap, multi-channel compositing, future raycasting      |
+| [05 — Roadmap](./docs/05-roadmap.md)                               | Milestones NJ-0 … NJ-5+                                                             |
+| [06 — jit-ui integration](./docs/06-jit-ui-integration.md)         | Phase C: the `IVisualizer` adapter in jax-image-visualization (deferred)            |
+| [07 — napari concept mapping](./docs/07-napari-concept-mapping.md) | How each napari concept maps to napari-js                                           |
 
 ## Acknowledgments
 

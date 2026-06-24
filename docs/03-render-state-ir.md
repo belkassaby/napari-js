@@ -36,31 +36,31 @@ interface RenderState {
 interface CameraState {
   /** 2D: orthographic. 3D (NJ-5+): adds angles + perspective. */
   kind: '2d' | '3d';
-  center: number[];          // world coords (y, x) or (z, y, x)
-  zoom: number;              // canvas px per world px
-  angles?: [number, number, number];   // Euler degrees, 3D only
-  perspective?: number;      // FOV degrees; 0 = orthographic
+  center: number[]; // world coords (y, x) or (z, y, x)
+  zoom: number; // canvas px per world px
+  angles?: [number, number, number]; // Euler degrees, 3D only
+  perspective?: number; // FOV degrees; 0 = orthographic
 }
 
 type LayerRenderState =
   | ImageLayerRS
-  | PointsLayerRS      // NJ-5
-  | LabelsLayerRS      // NJ-5
-  | VolumeLayerRS;     // NJ-5+
+  | PointsLayerRS // NJ-5
+  | LabelsLayerRS // NJ-5
+  | VolumeLayerRS; // NJ-5+
 
 interface LayerRenderStateBase {
   id: string;
   kind: 'image' | 'points' | 'labels' | 'volume';
   visible: boolean;
-  opacity: number;                 // 0..1
-  blending: BlendMode;             // 'opaque'|'translucent'|'translucent-no-depth'|'additive'|'minimum'
+  opacity: number; // 0..1
+  blending: BlendMode; // 'opaque'|'translucent'|'translucent-no-depth'|'additive'|'minimum'
   /** Data→world affine as a column-major mat4 (already sliced to displayed dims). */
-  transform: Float32Array;         // length 16
+  transform: Float32Array; // length 16
 }
 
 interface ImageLayerRS extends LayerRenderStateBase {
   kind: 'image';
-  texture: TextureHandle;          // opaque handle into the resource pool
+  texture: TextureHandle; // opaque handle into the resource pool
   textureFormat: 'r8unorm' | 'r16uint' | 'r16float' | 'r32float' | 'rgba8unorm';
   /** Normalization window in source-data units (e.g. [0, 4095] for 12-bit). */
   contrastLimits: [number, number];
@@ -80,7 +80,7 @@ math into the fragment shader.
 ## Resource handles
 
 ```ts
-type TextureHandle = number;   // index into engine/resources.ts pool
+type TextureHandle = number; // index into engine/resources.ts pool
 ```
 
 The reducer does not allocate GPU resources. It records, per layer, a stable handle and a

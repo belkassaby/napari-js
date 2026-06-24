@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
-  multiply, perspective, lookAt, invert, identity, scale3d, translate3d, type Mat4,
+  multiply,
+  perspective,
+  lookAt,
+  invert,
+  identity,
+  scale3d,
+  translate3d,
+  type Mat4,
 } from '../src/math/mat4';
 
 function apply(m: Mat4, v: [number, number, number, number]): [number, number, number, number] {

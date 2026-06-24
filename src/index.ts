@@ -30,21 +30,50 @@ export type { VolumeLayerOptions, VolumeRendering } from './layers/volume-layer'
 export { nearestPointIndex } from './picking/pick';
 
 // Color
-export { Colormap, resolveColormap, NAMED_COLORMAPS, GRAY, RED, GREEN, BLUE, VIRIDIS, MAGMA } from './color/colormap';
+export {
+  Colormap,
+  resolveColormap,
+  NAMED_COLORMAPS,
+  GRAY,
+  RED,
+  GREEN,
+  BLUE,
+  VIRIDIS,
+  MAGMA,
+} from './color/colormap';
 export type { RGB, ColorStop } from './color/colormap';
 export { buildLut, LUT_SIZE } from './color/lut';
 export { buildLabelLut } from './color/label-colormap';
 export { windowGamma, mapScalar, additiveComposite } from './color/display-pipeline';
 
 // Data sources
-export { toTextureSource, defaultContrastLimits, isGrayscale, channelsOf, depthOf } from './io/texture-source';
+export {
+  toTextureSource,
+  defaultContrastLimits,
+  isGrayscale,
+  channelsOf,
+  depthOf,
+} from './io/texture-source';
 export type {
-  TextureSource, TypedImageSource, ExternalImageSource, TiledSource,
-  TileKey, PixelChunk, ImageInput, PixelDtype,
+  TextureSource,
+  TypedImageSource,
+  ExternalImageSource,
+  TiledSource,
+  TileKey,
+  PixelChunk,
+  ImageInput,
+  PixelDtype,
 } from './io/texture-source';
 
 // Pyramid / tiling helpers
-export { selectLevel, levelScale, levelDims, tileGrid, visibleTiles, worldViewport } from './io/pyramid';
+export {
+  selectLevel,
+  levelScale,
+  levelDims,
+  tileGrid,
+  visibleTiles,
+  worldViewport,
+} from './io/pyramid';
 export type { Rect, VisibleTile } from './io/pyramid';
 export { LruCache } from './cache/lru';
 

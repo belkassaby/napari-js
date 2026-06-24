@@ -38,7 +38,12 @@ describe('additiveComposite', () => {
   });
 
   it('clamps to 1', () => {
-    expect(additiveComposite([[0.8, 0, 0], [0.5, 0, 0]])).toEqual([1, 0, 0]);
+    expect(
+      additiveComposite([
+        [0.8, 0, 0],
+        [0.5, 0, 0],
+      ]),
+    ).toEqual([1, 0, 0]);
   });
 
   it('is black for no channels', () => {

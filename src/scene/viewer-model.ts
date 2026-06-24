@@ -26,7 +26,10 @@ export class ViewerModel {
     this.camera3d.changed.connect(() => this.changed.emit(this));
     this.dims.changed.connect(() => this.changed.emit(this));
     this.layers.added.connect((layer) => {
-      this.layerDisposers.set(layer, layer.changed.connect(() => this.changed.emit(this)));
+      this.layerDisposers.set(
+        layer,
+        layer.changed.connect(() => this.changed.emit(this)),
+      );
     });
     this.layers.removed.connect((layer) => {
       this.layerDisposers.get(layer)?.();

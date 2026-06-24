@@ -7,7 +7,10 @@ import {
   type TypedImageSource,
 } from '../src/io/texture-source';
 
-const scalar = (dtype: TypedImageSource['dtype'], data: TypedImageSource['data']): TypedImageSource => ({
+const scalar = (
+  dtype: TypedImageSource['dtype'],
+  data: TypedImageSource['data'],
+): TypedImageSource => ({
   kind: 'typed',
   width: 2,
   height: 1,

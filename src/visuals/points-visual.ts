@@ -93,7 +93,12 @@ export class PointsVisual implements LayerVisual {
     if (!this.instanceBuffer || this.layer.count === 0) return;
     const mvp = multiply(
       view.camera2d.viewProjection(view.vw, view.vh),
-      scaleTranslate2d(this.layer.scale[0], this.layer.scale[1], this.layer.translate[0], this.layer.translate[1]),
+      scaleTranslate2d(
+        this.layer.scale[0],
+        this.layer.scale[1],
+        this.layer.translate[0],
+        this.layer.translate[1],
+      ),
     );
     const s = this.scratch;
     s.set(mvp, 0);

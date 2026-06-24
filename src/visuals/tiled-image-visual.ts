@@ -64,11 +64,14 @@ export class TiledImageVisual implements LayerVisual {
     this.pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] });
 
     this.lutSampler = device.createSampler({
-      magFilter: 'linear', minFilter: 'linear',
-      addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge',
+      magFilter: 'linear',
+      minFilter: 'linear',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
     });
     this.lutTexture = device.createTexture({
-      size: [LUT_SIZE, 1], format: 'rgba8unorm',
+      size: [LUT_SIZE, 1],
+      format: 'rgba8unorm',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
     this.writeLut();
@@ -89,9 +92,21 @@ export class TiledImageVisual implements LayerVisual {
     const f = this.plan.filterable;
     return this.device.createBindGroupLayout({
       entries: [
-        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: f ? 'filtering' : 'non-filtering' } },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: f ? 'float' : 'unfilterable-float' } },
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform' },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: { type: f ? 'filtering' : 'non-filtering' },
+        },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { sampleType: f ? 'float' : 'unfilterable-float' },
+        },
         { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
         { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       ],
@@ -102,24 +117,33 @@ export class TiledImageVisual implements LayerVisual {
     return this.device.createRenderPipeline({
       layout: this.pipelineLayout,
       vertex: { module: this.module, entryPoint: 'vs' },
-      fragment: { module: this.module, entryPoint: 'fs', targets: [{ format: this.format, blend: blendStateFor(blend) }] },
+      fragment: {
+        module: this.module,
+        entryPoint: 'fs',
+        targets: [{ format: this.format, blend: blendStateFor(blend) }],
+      },
       primitive: { topology: 'triangle-list' },
     });
   }
 
   private createSrcSampler(interp: Interpolation): GPUSampler {
-    const filter: GPUFilterMode = !this.plan.filterable || interp === 'nearest' ? 'nearest' : 'linear';
+    const filter: GPUFilterMode =
+      !this.plan.filterable || interp === 'nearest' ? 'nearest' : 'linear';
     return this.device.createSampler({
-      magFilter: filter, minFilter: filter,
-      addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge',
+      magFilter: filter,
+      minFilter: filter,
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
     });
   }
 
   private writeLut(): void {
     const cmap = this.layer.colormap ?? GRAY;
     this.device.queue.writeTexture(
-      { texture: this.lutTexture }, buildLut(cmap, LUT_SIZE),
-      { bytesPerRow: LUT_SIZE * 4, rowsPerImage: 1 }, { width: LUT_SIZE, height: 1 },
+      { texture: this.lutTexture },
+      buildLut(cmap, LUT_SIZE),
+      { bytesPerRow: LUT_SIZE * 4, rowsPerImage: 1 },
+      { width: LUT_SIZE, height: 1 },
     );
   }
 
@@ -141,7 +165,8 @@ export class TiledImageVisual implements LayerVisual {
         this.pending.delete(key);
         if (this.disposed) return;
         const texture = this.device.createTexture({
-          size: [chunk.width, chunk.height], format: this.plan.format,
+          size: [chunk.width, chunk.height],
+          format: this.plan.format,
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
         });
         this.device.queue.writeTexture(
@@ -151,7 +176,8 @@ export class TiledImageVisual implements LayerVisual {
           { width: chunk.width, height: chunk.height },
         );
         const uniformBuffer = this.device.createBuffer({
-          size: UNIFORM_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+          size: UNIFORM_BYTES,
+          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
         const bindGroup = this.device.createBindGroup({
           layout: this.bindGroupLayout,
@@ -220,7 +246,12 @@ export class TiledImageVisual implements LayerVisual {
     const target = selectLevel(cam.zoom, levels);
     const mvp = multiply(
       cam.viewProjection(rv.vw, rv.vh),
-      scaleTranslate2d(this.layer.scale[0], this.layer.scale[1], this.layer.translate[0], this.layer.translate[1]),
+      scaleTranslate2d(
+        this.layer.scale[0],
+        this.layer.scale[1],
+        this.layer.translate[0],
+        this.layer.translate[1],
+      ),
     );
 
     pass.setPipeline(this.pipeline);

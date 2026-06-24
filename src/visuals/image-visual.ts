@@ -17,7 +17,14 @@ type UploadPlan = FormatPlan & { data: Uint8Array | Uint16Array | Float32Array |
 
 function planUpload(source: TextureSource, float32Filterable: boolean): UploadPlan {
   if (source.kind === 'external') {
-    return { format: 'rgba8unorm', bytesPerPixel: 4, filterable: true, sampleScale: 1 / 255, isRgba: true, data: null };
+    return {
+      format: 'rgba8unorm',
+      bytesPerPixel: 4,
+      filterable: true,
+      sampleScale: 1 / 255,
+      isRgba: true,
+      data: null,
+    };
   }
   if (source.kind === 'tiled') {
     throw new Error('ImageVisual does not render tiled sources; use TiledImageVisual.');
@@ -89,9 +96,21 @@ export class ImageVisual implements LayerVisual {
     const f = this.plan.filterable;
     return this.device.createBindGroupLayout({
       entries: [
-        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: f ? 'filtering' : 'non-filtering' } },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: f ? 'float' : 'unfilterable-float' } },
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform' },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: { type: f ? 'filtering' : 'non-filtering' },
+        },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { sampleType: f ? 'float' : 'unfilterable-float' },
+        },
         { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
         { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       ],
@@ -152,7 +171,8 @@ export class ImageVisual implements LayerVisual {
 
   private createSrcSampler(interp: Interpolation): GPUSampler {
     // Unfilterable float textures must use nearest filtering.
-    const filter: GPUFilterMode = !this.plan.filterable || interp === 'nearest' ? 'nearest' : 'linear';
+    const filter: GPUFilterMode =
+      !this.plan.filterable || interp === 'nearest' ? 'nearest' : 'linear';
     return this.device.createSampler({
       magFilter: filter,
       minFilter: filter,

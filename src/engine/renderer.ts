@@ -38,7 +38,10 @@ export class Renderer {
   constructor(
     private readonly device: GPUDevice,
     private readonly target: CanvasTarget,
-    private readonly options: RendererOptions = { float32Filterable: false, onNeedsRedraw: () => {} },
+    private readonly options: RendererOptions = {
+      float32Filterable: false,
+      onNeedsRedraw: () => {},
+    },
   ) {}
 
   addLayer(layer: Layer): void {

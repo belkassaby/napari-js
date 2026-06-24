@@ -1,10 +1,6 @@
 import { Layer, type BlendMode } from './layer';
 import { Colormap, resolveColormap } from '../color/colormap';
-import {
-  type TextureSource,
-  defaultContrastLimits,
-  isGrayscale,
-} from '../io/texture-source';
+import { type TextureSource, defaultContrastLimits, isGrayscale } from '../io/texture-source';
 
 export type Interpolation = 'nearest' | 'linear';
 

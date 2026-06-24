@@ -64,8 +64,11 @@ export class VolumeVisual implements LayerVisual {
     this.lutVersion = layer.colormapVersion;
 
     this.volSampler = device.createSampler({
-      magFilter: 'linear', minFilter: 'linear',
-      addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge', addressModeW: 'clamp-to-edge',
+      magFilter: 'linear',
+      minFilter: 'linear',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
+      addressModeW: 'clamp-to-edge',
     });
     this.lutSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
@@ -84,7 +87,11 @@ export class VolumeVisual implements LayerVisual {
     return this.device.createRenderPipeline({
       layout: 'auto',
       vertex: { module: this.module, entryPoint: 'vs' },
-      fragment: { module: this.module, entryPoint: 'fs', targets: [{ format: this.format, blend: blendStateFor(blend) }] },
+      fragment: {
+        module: this.module,
+        entryPoint: 'fs',
+        targets: [{ format: this.format, blend: blendStateFor(blend) }],
+      },
       primitive: { topology: 'triangle-list' },
     });
   }

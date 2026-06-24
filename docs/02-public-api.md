@@ -10,17 +10,17 @@ and frozen at NJ-4.
 import { Viewer } from 'napari-js';
 
 const viewer = new Viewer({
-  canvas: document.querySelector('canvas')!,   // or { container } to create one
+  canvas: document.querySelector('canvas')!, // or { container } to create one
   // optional: device, colorSpace, devicePixelRatio
 });
-await viewer.ready;                              // WebGPU device acquired
+await viewer.ready; // WebGPU device acquired
 ```
 
 `Viewer` is the single entry point. It owns the model (`layers`, `camera`, `dims`) and the
 engine. Disposing:
 
 ```ts
-viewer.dispose();   // tears down GPU resources + listeners
+viewer.dispose(); // tears down GPU resources + listeners
 ```
 
 ## Adding image layers
@@ -30,14 +30,14 @@ napari parity: `viewer.add_image(data, **kwargs)` → `viewer.addImage(data, opt
 ```ts
 const layer = viewer.addImage(source, {
   name: 'DAPI',
-  colormap: 'blue',          // named colormap or a Colormap object
+  colormap: 'blue', // named colormap or a Colormap object
   contrastLimits: [0, 4095], // window; defaults to data dtype range / percentile
   gamma: 1.0,
   opacity: 1.0,
-  blending: 'additive',      // 'opaque' | 'translucent' | 'additive' | 'minimum'
+  blending: 'additive', // 'opaque' | 'translucent' | 'additive' | 'minimum'
   visible: true,
-  interpolation: 'linear',   // 'nearest' | 'linear'
-  scale: [1, 1],             // physical pixel size (e.g. µm); drives the transform
+  interpolation: 'linear', // 'nearest' | 'linear'
+  scale: [1, 1], // physical pixel size (e.g. µm); drives the transform
   translate: [0, 0],
 });
 ```
@@ -53,9 +53,9 @@ napari, and identical to the Fiji "Merge Channels" model the OpenSeadragon backe
 emulates on the CPU. napari-js does the compositing on the GPU.
 
 ```ts
-viewer.addImage(ch0, { colormap: 'blue',  blending: 'additive', contrastLimits: [0, 4095] });
+viewer.addImage(ch0, { colormap: 'blue', blending: 'additive', contrastLimits: [0, 4095] });
 viewer.addImage(ch1, { colormap: 'green', blending: 'additive', contrastLimits: [0, 4095] });
-viewer.addImage(ch2, { colormap: 'red',   blending: 'additive', contrastLimits: [0, 4095] });
+viewer.addImage(ch2, { colormap: 'red', blending: 'additive', contrastLimits: [0, 4095] });
 ```
 
 ## Live display updates (no re-fetch)
@@ -73,12 +73,12 @@ layer.visible = false;
 
 ## Layer types (planned)
 
-| Class | Milestone | Key properties |
-|---|---|---|
-| `ImageLayer` | NJ-1 / NJ-2 | `colormap`, `contrastLimits`, `gamma`, `interpolation`, `blending` |
-| `PointsLayer` | NJ-5 | `data` (N×D), `size`, `faceColor`, `borderColor`, `symbol` |
-| `LabelsLayer` | NJ-5 | `data` (int image), `colormap` (cyclic), `selectedLabel`, `opacity` |
-| `VolumeLayer` | NJ-5+ | `data` (3D), `rendering` ('mip'|'iso'|'translucent'), `isoThreshold` |
+| Class         | Milestone   | Key properties                                                      |
+| ------------- | ----------- | ------------------------------------------------------------------- | ----- | ------------------------------ |
+| `ImageLayer`  | NJ-1 / NJ-2 | `colormap`, `contrastLimits`, `gamma`, `interpolation`, `blending`  |
+| `PointsLayer` | NJ-5        | `data` (N×D), `size`, `faceColor`, `borderColor`, `symbol`          |
+| `LabelsLayer` | NJ-5        | `data` (int image), `colormap` (cyclic), `selectedLabel`, `opacity` |
+| `VolumeLayer` | NJ-5+       | `data` (3D), `rendering` ('mip'                                     | 'iso' | 'translucent'), `isoThreshold` |
 
 `viewer.layers` is an evented, ordered `LayerList`: `add`, `remove`, `move`, `clear`,
 `[Symbol.iterator]`, and `events.changed`.
@@ -86,12 +86,12 @@ layer.visible = false;
 ## Camera & dims
 
 ```ts
-viewer.camera.center = [y, x];   // world coords
-viewer.camera.zoom = 1.5;        // canvas px per world px
+viewer.camera.center = [y, x]; // world coords
+viewer.camera.zoom = 1.5; // canvas px per world px
 viewer.camera.events.changed.connect(handler);
 
-viewer.dims.ndisplay = 2;        // 2 (slice) or 3 (volume, NJ-5+)
-viewer.dims.currentStep = [z];   // z-slice / time index for stacks (NJ-3)
+viewer.dims.ndisplay = 2; // 2 (slice) or 3 (volume, NJ-5+)
+viewer.dims.currentStep = [z]; // z-slice / time index for stacks (NJ-3)
 ```
 
 ## TextureSource (the pixel-ingestion seam)
@@ -115,8 +115,8 @@ interface TextureSource {
 }
 
 interface PixelChunk {
-  data: ArrayBufferView | ImageBitmap;   // typed array or decoded bitmap
-  region: Region;                        // where it belongs in level coords
+  data: ArrayBufferView | ImageBitmap; // typed array or decoded bitmap
+  region: Region; // where it belongs in level coords
 }
 ```
 
@@ -134,9 +134,9 @@ Built-in sources (NJ-1 → NJ-3):
 ## Readback & export (NJ-4)
 
 ```ts
-const px = await viewer.readDisplayedPixels();   // { width, height, channels, data }
-const blob = await viewer.screenshot();           // composited PNG Blob
-const hist = await viewer.histogram(layer, 256);  // bins from displayed pixels
+const px = await viewer.readDisplayedPixels(); // { width, height, channels, data }
+const blob = await viewer.screenshot(); // composited PNG Blob
+const hist = await viewer.histogram(layer, 256); // bins from displayed pixels
 ```
 
 ## Events summary

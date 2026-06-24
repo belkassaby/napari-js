@@ -61,8 +61,10 @@ export class LabelsVisual implements LayerVisual {
     );
 
     this.sampler = device.createSampler({
-      magFilter: 'nearest', minFilter: 'nearest',
-      addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge',
+      magFilter: 'nearest',
+      minFilter: 'nearest',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
     });
 
     this.currentBlend = layer.blending;
@@ -83,7 +85,11 @@ export class LabelsVisual implements LayerVisual {
     return this.device.createRenderPipeline({
       layout: 'auto',
       vertex: { module: this.module, entryPoint: 'vs' },
-      fragment: { module: this.module, entryPoint: 'fs', targets: [{ format: this.format, blend: blendStateFor(blend) }] },
+      fragment: {
+        module: this.module,
+        entryPoint: 'fs',
+        targets: [{ format: this.format, blend: blendStateFor(blend) }],
+      },
       primitive: { topology: 'triangle-list' },
     });
   }
@@ -99,7 +105,12 @@ export class LabelsVisual implements LayerVisual {
   draw(pass: GPURenderPassEncoder, view: RenderView): void {
     const mvp = multiply(
       view.camera2d.viewProjection(view.vw, view.vh),
-      scaleTranslate2d(this.layer.scale[0], this.layer.scale[1], this.layer.translate[0], this.layer.translate[1]),
+      scaleTranslate2d(
+        this.layer.scale[0],
+        this.layer.scale[1],
+        this.layer.translate[0],
+        this.layer.translate[1],
+      ),
     );
     const s = this.scratch;
     s.set(mvp, 0);

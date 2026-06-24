@@ -6,7 +6,13 @@ import { buildLabelLut } from '../src/color/label-colormap';
 
 describe('PointsLayer.buildInstanceData', () => {
   it('broadcasts a single size/color and lays out 12 floats per point', () => {
-    const p = new PointsLayer([[10, 20], [30, 40]], { size: 8, faceColor: [1, 0, 0, 1] });
+    const p = new PointsLayer(
+      [
+        [10, 20],
+        [30, 40],
+      ],
+      { size: 8, faceColor: [1, 0, 0, 1] },
+    );
     const d = p.buildInstanceData();
     expect(d.length).toBe(2 * 12);
     expect([d[0], d[1], d[2]]).toEqual([10, 20, 8]); // pos + size
@@ -15,10 +21,19 @@ describe('PointsLayer.buildInstanceData', () => {
   });
 
   it('uses per-point size and color arrays', () => {
-    const p = new PointsLayer([[0, 0], [1, 1]], {
-      size: [4, 9],
-      faceColor: [[1, 0, 0, 1], [0, 1, 0, 1]],
-    });
+    const p = new PointsLayer(
+      [
+        [0, 0],
+        [1, 1],
+      ],
+      {
+        size: [4, 9],
+        faceColor: [
+          [1, 0, 0, 1],
+          [0, 1, 0, 1],
+        ],
+      },
+    );
     expect(p.sizeAt(0)).toBe(4);
     expect(p.sizeAt(1)).toBe(9);
     const d = p.buildInstanceData();
@@ -51,7 +66,10 @@ describe('nearestPointIndex', () => {
 describe('LabelsLayer.labelAt', () => {
   it('reads the id at a pixel and 0 out of bounds', () => {
     const data = new Uint8Array(4); // 2x2
-    data[0] = 0; data[1] = 5; data[2] = 7; data[3] = 9;
+    data[0] = 0;
+    data[1] = 5;
+    data[2] = 7;
+    data[3] = 9;
     const layer = new LabelsLayer(data, 2, 2);
     expect(layer.labelAt(1, 0)).toBe(5);
     expect(layer.labelAt(0, 1)).toBe(7);

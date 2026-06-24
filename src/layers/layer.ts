@@ -27,11 +27,13 @@ export abstract class Layer {
   protected _visible = true;
   protected _blending: BlendMode = 'translucent';
 
-  protected constructor(opts: {
-    name?: string;
-    scale?: [number, number];
-    translate?: [number, number];
-  } = {}) {
+  protected constructor(
+    opts: {
+      name?: string;
+      scale?: [number, number];
+      translate?: [number, number];
+    } = {},
+  ) {
     this.name = opts.name ?? this.id;
     this.scale = opts.scale ?? [1, 1];
     this.translate = opts.translate ?? [0, 0];

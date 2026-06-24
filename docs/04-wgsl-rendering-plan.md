@@ -35,13 +35,13 @@ existing backend, which lacks `ScalarColormap` and composites on the CPU at ~262
 
 ### Blend modes → `GPUBlendState`
 
-| `BlendMode` | color blend | notes |
-|---|---|---|
-| `opaque` | replace (no blend) | depth write on |
-| `translucent` | `src.a` / `1-src.a` over | standard alpha |
-| `translucent-no-depth` | same, depth test off | |
-| `additive` | `one` / `one` add | multi-channel fluorescence |
-| `minimum` | `min` operation | darkest-wins |
+| `BlendMode`            | color blend              | notes                      |
+| ---------------------- | ------------------------ | -------------------------- |
+| `opaque`               | replace (no blend)       | depth write on             |
+| `translucent`          | `src.a` / `1-src.a` over | standard alpha             |
+| `translucent-no-depth` | same, depth test off     |                            |
+| `additive`             | `one` / `one` add        | multi-channel fluorescence |
+| `minimum`              | `min` operation          | darkest-wins               |
 
 ## Tiled / pyramidal images (NJ-3)
 

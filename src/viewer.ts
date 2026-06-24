@@ -143,7 +143,12 @@ export class Viewer {
   }
 
   /** Add a labels (segmentation) layer from an 8-bit id image. */
-  addLabels(data: Uint8Array, width: number, height: number, opts: LabelsLayerOptions = {}): LabelsLayer {
+  addLabels(
+    data: Uint8Array,
+    width: number,
+    height: number,
+    opts: LabelsLayerOptions = {},
+  ): LabelsLayer {
     const layer = new LabelsLayer(data, width, height, opts);
     this.model.layers.add(layer);
     this.maybeFitFirst(width, height);
@@ -226,7 +231,12 @@ export class Viewer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     });
     this.renderer.renderInto(
-      texture.createView(), this.renderInputs(), this.allLayers(), cssW, cssH, this.background,
+      texture.createView(),
+      this.renderInputs(),
+      this.allLayers(),
+      cssW,
+      cssH,
+      this.background,
     );
     const data = await readTextureToRGBA(this.ctx.device, texture, w, h);
     texture.destroy();

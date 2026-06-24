@@ -24,7 +24,9 @@ export function mapScalar(
   value: number,
   opts: { climLo: number; climHi: number; gamma: number; invert: boolean; colormap: Colormap },
 ): RGB {
-  return opts.colormap.sample(windowGamma(value, opts.climLo, opts.climHi, opts.gamma, opts.invert));
+  return opts.colormap.sample(
+    windowGamma(value, opts.climLo, opts.climHi, opts.gamma, opts.invert),
+  );
 }
 
 /**

@@ -5,12 +5,26 @@
   "type": "module",
   "license": "MIT",
   "author": "Baha Elkassaby",
-  "repository": { "type": "git", "url": "git+https://github.com/belkassaby/napari-js.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/belkassaby/napari-js.git"
+  },
   "homepage": "https://github.com/belkassaby/napari-js#readme",
-  "bugs": { "url": "https://github.com/belkassaby/napari-js/issues" },
+  "bugs": {
+    "url": "https://github.com/belkassaby/napari-js/issues"
+  },
   "sideEffects": false,
-  "keywords": ["webgpu", "napari", "image", "visualization", "microscopy", "rendering"],
-  "files": ["dist"],
+  "keywords": [
+    "webgpu",
+    "napari",
+    "image",
+    "visualization",
+    "microscopy",
+    "rendering"
+  ],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/napari-js.js",
   "module": "./dist/napari-js.js",
   "types": "./dist/index.d.ts",
@@ -28,11 +42,15 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"playground/**/*.ts\" \"*.{ts,json,md}\" \"docs/**/*.md\" \"index.html\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"playground/**/*.ts\" \"*.{ts,json,md}\" \"docs/**/*.md\" \"index.html\"",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.44",
     "eslint": "^9.9.0",
+    "prettier": "^3.8.3",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.2.0",
     "vite": "^5.4.0",

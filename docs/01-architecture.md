@@ -4,7 +4,7 @@
 
 1. **Faithful to napari's model.** A `Viewer` owns a `LayerList`, a `Camera`, and `Dims`.
    Each `Layer` carries data + display properties (colormap, contrast limits, gamma,
-   opacity, blending). Multi-channel images are modeled as *one Image layer per channel*
+   opacity, blending). Multi-channel images are modeled as _one Image layer per channel_
    with additive blending — exactly as napari does. This keeps the mental model and the
    port 1:1.
 2. **Model is render-agnostic and headless-testable.** The scene model emits events; the

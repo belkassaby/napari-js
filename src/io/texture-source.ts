@@ -96,7 +96,11 @@ export function defaultContrastLimits(source: TextureSource): [number, number] {
 
 /** Normalize a user input into a {@link TextureSource}. */
 export function toTextureSource(input: ImageInput): TextureSource {
-  if (typeof input === 'object' && 'kind' in input && (input.kind === 'typed' || input.kind === 'tiled')) {
+  if (
+    typeof input === 'object' &&
+    'kind' in input &&
+    (input.kind === 'typed' || input.kind === 'tiled')
+  ) {
     return input;
   }
   const image = input as ImageBitmap | HTMLCanvasElement | HTMLImageElement;

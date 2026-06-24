@@ -22,12 +22,30 @@ export function formatPlanFor(
   float32Filterable: boolean,
 ): FormatPlan {
   if (channels === 4) {
-    return { format: 'rgba8unorm', bytesPerPixel: 4, filterable: true, sampleScale: 1 / 255, isRgba: true };
+    return {
+      format: 'rgba8unorm',
+      bytesPerPixel: 4,
+      filterable: true,
+      sampleScale: 1 / 255,
+      isRgba: true,
+    };
   }
   if (dtype === 'uint8') {
-    return { format: 'r8unorm', bytesPerPixel: 1, filterable: true, sampleScale: 1 / 255, isRgba: false };
+    return {
+      format: 'r8unorm',
+      bytesPerPixel: 1,
+      filterable: true,
+      sampleScale: 1 / 255,
+      isRgba: false,
+    };
   }
-  return { format: 'r32float', bytesPerPixel: 4, filterable: float32Filterable, sampleScale: 1, isRgba: false };
+  return {
+    format: 'r32float',
+    bytesPerPixel: 4,
+    filterable: float32Filterable,
+    sampleScale: 1,
+    isRgba: false,
+  };
 }
 
 /** Convert tile/image pixels to the upload representation for `format` (uint16 → float32). */

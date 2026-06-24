@@ -8,18 +8,18 @@ of the browser GPU ecosystem.
 
 **Feasible, well-bounded, but the renderer must be built from scratch.** napari's model
 is cleanly separable from its rendering and GUI, and the data each visual consumes is flat
-and serializable — so porting the *rendering model* to WebGPU is tractable. The difficulty
+and serializable — so porting the _rendering model_ to WebGPU is tractable. The difficulty
 is concentrated in one place: there is no renderer abstraction to reuse, and volume
 raycasting is hard on WebGPU.
 
 ## What the napari codebase looks like
 
-| Layer | LOC | Portability |
-|---|---|---|
-| Core model — `components/`, `layers/`, `utils/events/` | ~70K | ✅ Qt-free, render-free, serializable |
-| App/command model — `_app_model/` | small | ✅ GUI-agnostic |
-| Rendering — `_vispy/` | ~11K | ❌ Hardcoded to VisPy + OpenGL, **no abstraction** |
-| GUI — `_qt/` | ~37K | ❌ Qt (not relevant to us) |
+| Layer                                                  | LOC   | Portability                                        |
+| ------------------------------------------------------ | ----- | -------------------------------------------------- |
+| Core model — `components/`, `layers/`, `utils/events/` | ~70K  | ✅ Qt-free, render-free, serializable              |
+| App/command model — `_app_model/`                      | small | ✅ GUI-agnostic                                    |
+| Rendering — `_vispy/`                                  | ~11K  | ❌ Hardcoded to VisPy + OpenGL, **no abstraction** |
+| GUI — `_qt/`                                           | ~37K  | ❌ Qt (not relevant to us)                         |
 
 Key facts established by reading the source:
 
@@ -38,7 +38,7 @@ Key facts established by reading the source:
 - **napari's own custom shaders are small** (~331 lines of GLSL inline in Python: label LUT
   lookups + volume gradients/lighting/categorical in `napari/_vispy/visuals/volume.py` and
   `.../layers/labels.py`). GLSL→WGSL is mechanical for these. The genuinely hard shader is
-  VisPy's *base* volume raycasting loop, which napari extends but does not own.
+  VisPy's _base_ volume raycasting loop, which napari extends but does not own.
 
 ## What this means for napari-js
 

@@ -58,12 +58,19 @@ describe('visibleTiles', () => {
   });
 
   it('returns nothing when the view misses the image', () => {
-    expect(visibleTiles({ x: -500, y: -500, width: 100, height: 100 }, 1024, 1024, 0, 256)).toEqual([]);
+    expect(visibleTiles({ x: -500, y: -500, width: 100, height: 100 }, 1024, 1024, 0, 256)).toEqual(
+      [],
+    );
   });
 });
 
 describe('worldViewport', () => {
   it('is centered on the camera and scales inversely with zoom', () => {
-    expect(worldViewport(100, 50, 2, 800, 600)).toEqual({ x: 100 - 200, y: 50 - 150, width: 400, height: 300 });
+    expect(worldViewport(100, 50, 2, 800, 600)).toEqual({
+      x: 100 - 200,
+      y: 50 - 150,
+      width: 400,
+      height: 300,
+    });
   });
 });
