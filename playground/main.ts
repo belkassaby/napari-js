@@ -1,44 +1,32 @@
-import { Viewer, VERSION, levelDims, levelScale, type TiledSource, type TileKey, type PixelChunk } from '../src/index';
+import { Viewer, VERSION, nearestPointIndex, type TypedImageSource } from '../src/index';
 
-// A synthetic "multi-gigapixel" pyramidal, z-stacked source generated on the fly. fetchTile
-// renders a coordinate/checker pattern per tile so we can exercise tiling + LOD + z-scrub
-// without any real data or server.
-const FULL = 16384;
-const TILE = 256;
-const LEVELS = 7; // 16384 → 256 at the coarsest level
-const DEPTH = 8;
+const W = 512;
+const H = 512;
 
-function fetchTile({ level, col, row, z }: TileKey): Promise<PixelChunk> {
-  const dims = levelDims(FULL, FULL, level);
-  const w = Math.min(TILE, dims.width - col * TILE);
-  const h = Math.min(TILE, dims.height - row * TILE);
-  const s = levelScale(level);
-  const data = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      // Global level-0 coordinates of this texel.
-      const gx = (col * TILE + x) * s;
-      const gy = (row * TILE + y) * s;
-      const checker = (((gx >> 9) + (gy >> 9)) & 1) === 0 ? 90 : 30;
-      const rings = 60 * (0.5 + 0.5 * Math.sin((gx + gy) / (400 + z * 120)));
-      data[y * w + x] = Math.min(255, checker + rings);
+/** 8-bit grayscale gradient base image. */
+function gradient(): TypedImageSource {
+  const data = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      data[y * W + x] = Math.round(255 * (0.5 + 0.5 * Math.sin(x / 40) * Math.cos(y / 40)));
     }
   }
-  // Simulate async latency so LOD/progressive loading is visible.
-  return new Promise((resolve) => setTimeout(() => resolve({ width: w, height: h, data }), 8));
+  return { kind: 'typed', width: W, height: H, channels: 1, dtype: 'uint8', data };
 }
 
-const source: TiledSource = {
-  kind: 'tiled',
-  width: FULL,
-  height: FULL,
-  tileSize: TILE,
-  levels: LEVELS,
-  depth: DEPTH,
-  channels: 1,
-  dtype: 'uint8',
-  fetchTile,
-};
+/** A labels image: a few rectangular regions with distinct ids. */
+function labels(): { data: Uint8Array; width: number; height: number } {
+  const data = new Uint8Array(W * H);
+  const blocks: [number, number, number, number, number][] = [
+    [40, 40, 160, 160, 1],
+    [300, 60, 460, 200, 2],
+    [120, 300, 380, 460, 3],
+  ];
+  for (const [x0, y0, x1, y1, id] of blocks) {
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) data[y * W + x] = id;
+  }
+  return { data, width: W, height: H };
+}
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const msg = document.getElementById('msg') as HTMLDivElement;
@@ -52,28 +40,36 @@ async function main(): Promise<void> {
     return;
   }
 
-  viewer.addImage(source, { colormap: 'viridis', contrastLimits: [0, 255] });
+  viewer.addImage(gradient(), { colormap: 'gray', contrastLimits: [0, 255] });
 
-  const help = 'drag = pan · wheel = zoom (LOD) · ↑/↓ = z · s = screenshot · h = histogram';
-  const status = (): string => `napari-js ${VERSION} — NJ-4 tiled ${FULL}² · z ${viewer.dims.z}/${DEPTH - 1} · ${help}`;
-  msg.textContent = status();
+  const lbl = labels();
+  const labelsLayer = viewer.addLabels(lbl.data, lbl.width, lbl.height, { opacity: 0.5 });
 
-  window.addEventListener('keydown', async (e) => {
-    if (e.key === 'ArrowUp') viewer.dims.z += 1;
-    else if (e.key === 'ArrowDown') viewer.dims.z -= 1;
-    else if (e.key === 's') {
-      const blob = await viewer.screenshot();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'napari-js.png';
-      a.click();
-      URL.revokeObjectURL(url);
-    } else if (e.key === 'h') {
-      const hist = await viewer.histogram(16);
-      console.log('luminance histogram (16 bins):', Array.from(hist.counts));
-    } else return;
-    msg.textContent = status();
+  // A grid of points with per-point sizes/colors over the image.
+  const positions: number[][] = [];
+  for (let i = 0; i < 36; i++) positions.push([60 + (i % 6) * 80, 60 + Math.floor(i / 6) * 80]);
+  const sizes = positions.map((_, i) => 14 + (i % 5) * 6);
+  const colors = positions.map((_, i): [number, number, number, number] =>
+    i % 2 ? [1, 0.85, 0.2, 1] : [0.2, 0.8, 1, 1],
+  );
+  const pointsLayer = viewer.addPoints(positions, {
+    size: sizes,
+    faceColor: colors,
+    borderColor: [0, 0, 0, 1],
+    borderWidth: 2,
+    symbol: 'disc',
+  });
+
+  const help = 'drag = pan · wheel = zoom · click = pick';
+  msg.textContent = `napari-js ${VERSION} — NJ-5 points + labels · ${help}`;
+
+  canvas.addEventListener('click', (e) => {
+    const [x, y] = viewer.canvasToWorld(e.clientX, e.clientY);
+    const pi = nearestPointIndex(pointsLayer.positions, (i) => pointsLayer.sizeAt(i), x, y);
+    const id = labelsLayer.labelAt(x, y);
+    msg.textContent = `napari-js ${VERSION} — pick @ (${x.toFixed(0)},${y.toFixed(0)}) · point ${pi} · label ${id} · ${help}`;
+    labelsLayer.selectedLabel = id;
+    labelsLayer.showSelectedOnly = id !== 0;
   });
   window.addEventListener('resize', () => viewer.requestRender());
 }

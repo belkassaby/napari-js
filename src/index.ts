@@ -20,11 +20,17 @@ export { Layer } from './layers/layer';
 export type { BlendMode } from './layers/layer';
 export { ImageLayer } from './layers/image-layer';
 export type { ImageLayerOptions, Interpolation } from './layers/image-layer';
+export { PointsLayer } from './layers/points-layer';
+export type { PointsLayerOptions, PointSymbol, RGBA } from './layers/points-layer';
+export { LabelsLayer } from './layers/labels-layer';
+export type { LabelsLayerOptions } from './layers/labels-layer';
+export { nearestPointIndex } from './picking/pick';
 
 // Color
 export { Colormap, resolveColormap, NAMED_COLORMAPS, GRAY, RED, GREEN, BLUE, VIRIDIS, MAGMA } from './color/colormap';
 export type { RGB, ColorStop } from './color/colormap';
 export { buildLut, LUT_SIZE } from './color/lut';
+export { buildLabelLut } from './color/label-colormap';
 export { windowGamma, mapScalar, additiveComposite } from './color/display-pipeline';
 
 // Data sources

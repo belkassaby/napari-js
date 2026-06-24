@@ -6,6 +6,9 @@ import type { Camera } from './camera/camera';
 import type { LayerList } from './scene/layer-list';
 import { attachCameraControls } from './camera/controls';
 import { ImageLayer, type ImageLayerOptions } from './layers/image-layer';
+import { PointsLayer, type PointsLayerOptions } from './layers/points-layer';
+import { LabelsLayer, type LabelsLayerOptions } from './layers/labels-layer';
+import type { Layer } from './layers/layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
 import type { Dims } from './scene/dims';
 import { readTextureToRGBA, type PixelData } from './engine/readback';
@@ -73,10 +76,10 @@ export class Viewer {
 
     // Register any layers added before the device was ready.
     for (const layer of this.model.layers) {
-      if (layer instanceof ImageLayer) this.renderer.addLayer(layer);
+      this.renderer.addLayer(layer);
     }
     this.model.layers.added.connect((layer) => {
-      if (layer instanceof ImageLayer) this.renderer?.addLayer(layer);
+      this.renderer?.addLayer(layer);
       this.requestRender();
     });
     this.model.layers.removed.connect((layer) => {
@@ -99,6 +102,31 @@ export class Viewer {
     this.model.dims.depth = Math.max(this.model.dims.depth, depthOf(source));
     this.maybeFitFirst(source.width, source.height);
     return layer;
+  }
+
+  /** Add a points (scatter) layer. Positions are `[x, y]` pairs in data coordinates. */
+  addPoints(positions: Float32Array | number[][], opts: PointsLayerOptions = {}): PointsLayer {
+    const layer = new PointsLayer(positions, opts);
+    this.model.layers.add(layer);
+    return layer;
+  }
+
+  /** Add a labels (segmentation) layer from an 8-bit id image. */
+  addLabels(data: Uint8Array, width: number, height: number, opts: LabelsLayerOptions = {}): LabelsLayer {
+    const layer = new LabelsLayer(data, width, height, opts);
+    this.model.layers.add(layer);
+    this.maybeFitFirst(width, height);
+    return layer;
+  }
+
+  /** Convert canvas client coordinates to data/world coordinates (for picking). */
+  canvasToWorld(clientX: number, clientY: number): [number, number] {
+    const rect = this.canvas.getBoundingClientRect();
+    const px = clientX - rect.left - rect.width / 2;
+    const py = clientY - rect.top - rect.height / 2;
+    const { zoom } = this.model.camera;
+    const [cx, cy] = this.model.camera.center;
+    return [cx + px / zoom, cy + py / zoom];
   }
 
   private maybeFitFirst(width: number, height: number): void {
@@ -124,11 +152,11 @@ export class Viewer {
   private renderFrame(): void {
     if (!this.renderer || !this.target) return;
     this.target.syncSize();
-    this.renderer.render(this.model.camera, this.imageLayers(), this.model.dims.z, this.background);
+    this.renderer.render(this.model.camera, this.allLayers(), this.model.dims.z, this.background);
   }
 
-  private imageLayers(): ImageLayer[] {
-    return this.model.layers.items.filter((l): l is ImageLayer => l instanceof ImageLayer);
+  private allLayers(): readonly Layer[] {
+    return this.model.layers.items;
   }
 
   /**
@@ -149,7 +177,7 @@ export class Viewer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     });
     this.renderer.renderInto(
-      texture.createView(), cssW, cssH, this.model.camera, this.imageLayers(), this.model.dims.z, this.background,
+      texture.createView(), cssW, cssH, this.model.camera, this.allLayers(), this.model.dims.z, this.background,
     );
     const data = await readTextureToRGBA(this.ctx.device, texture, w, h);
     texture.destroy();

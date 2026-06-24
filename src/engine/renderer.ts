@@ -1,8 +1,13 @@
 import type { CanvasTarget } from './canvas';
 import type { Camera } from '../camera/camera';
+import type { Layer } from '../layers/layer';
 import { ImageLayer } from '../layers/image-layer';
+import { PointsLayer } from '../layers/points-layer';
+import { LabelsLayer } from '../layers/labels-layer';
 import { ImageVisual } from '../visuals/image-visual';
 import { TiledImageVisual } from '../visuals/tiled-image-visual';
+import { PointsVisual } from '../visuals/points-visual';
+import { LabelsVisual } from '../visuals/labels-visual';
 import type { LayerVisual } from '../visuals/layer-visual';
 
 export interface RendererOptions {
@@ -25,18 +30,27 @@ export class Renderer {
     private readonly options: RendererOptions = { float32Filterable: false, onNeedsRedraw: () => {} },
   ) {}
 
-  addLayer(layer: ImageLayer): void {
+  addLayer(layer: Layer): void {
     if (this.visuals.has(layer.id)) return;
-    const visual: LayerVisual =
-      layer.source.kind === 'tiled'
-        ? new TiledImageVisual(this.device, this.target.format, layer, {
+    const visual = this.createVisual(layer);
+    if (visual) this.visuals.set(layer.id, visual);
+  }
+
+  private createVisual(layer: Layer): LayerVisual | null {
+    const format = this.target.format;
+    if (layer instanceof ImageLayer) {
+      return layer.source.kind === 'tiled'
+        ? new TiledImageVisual(this.device, format, layer, {
             float32Filterable: this.options.float32Filterable,
             onNeedsRedraw: this.options.onNeedsRedraw,
           })
-        : new ImageVisual(this.device, this.target.format, layer, {
+        : new ImageVisual(this.device, format, layer, {
             float32Filterable: this.options.float32Filterable,
           });
-    this.visuals.set(layer.id, visual);
+    }
+    if (layer instanceof PointsLayer) return new PointsVisual(this.device, format, layer);
+    if (layer instanceof LabelsLayer) return new LabelsVisual(this.device, format, layer);
+    return null;
   }
 
   removeLayer(id: string): void {
@@ -51,7 +65,7 @@ export class Renderer {
   /** Draw the given layers (in order) into the swapchain for the current camera and z-slice. */
   render(
     camera: Camera,
-    layers: readonly ImageLayer[],
+    layers: readonly Layer[],
     z: number,
     background: GPUColor = { r: 0.07, g: 0.07, b: 0.09, a: 1 },
   ): void {
@@ -70,7 +84,7 @@ export class Renderer {
     vw: number,
     vh: number,
     camera: Camera,
-    layers: readonly ImageLayer[],
+    layers: readonly Layer[],
     z: number,
     background: GPUColor = { r: 0.07, g: 0.07, b: 0.09, a: 1 },
   ): void {

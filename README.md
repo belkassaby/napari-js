@@ -3,14 +3,14 @@
 A browser-native, **WebGPU** rendering engine that ports the visualization model of
 [napari](https://napari.org) (the Python multi-dimensional image viewer) to TypeScript.
 
-> **Status:** **NJ-4 complete (v0.1.0), pending publish.** Added GPU readback —
-> `viewer.readDisplayedPixels()` (RGBA8 composite via an offscreen render + buffer map),
-> `viewer.screenshot()` (PNG `Blob`), and `viewer.histogram(bins)` (luminance, from a pure
-> `histogramRGBA`). Package metadata, `files`, `exports`, and `prepublishOnly` are set;
-> `npm pack --dry-run` ships only `dist/`. The public API is the v0.1 surface (see
-> [docs/02](./docs/02-public-api.md)). All gates green (typecheck / lint / 63 unit tests /
-> build). **Remaining manual step:** `npm publish` (needs registry auth). Next: **NJ-5** —
-> Points + Labels layers. See the [roadmap](./docs/05-roadmap.md).
+> **Status:** **NJ-5 complete** — Points and Labels layers. `viewer.addPoints()` renders
+> instanced SDF markers (disc/ring/square, per-point size/color, antialiased border);
+> `viewer.addLabels()` renders an 8-bit id image through a cyclic palette LUT (nearest
+> sampling, transparent background, selected-label highlight). CPU picking via
+> `nearestPointIndex` + `LabelsLayer.labelAt` + `viewer.canvasToWorld`. Builds on the v0.1
+> base (readback/screenshot/histogram). All gates green (typecheck / lint / 72 unit tests /
+> build). `npm publish` (needs registry auth) and NJ-5+ volume raycasting remain. See the
+> [roadmap](./docs/05-roadmap.md).
 
 ## Quickstart
 
