@@ -3,6 +3,14 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.2.1]
+
+### Changed
+
+- Documentation: README adds a Features list and a library Install/Use example, and references
+  the originating issue [jit-ui#102](https://github.com/TheJacksonLaboratory/jit-ui/issues/102);
+  `docs/06` links the tracking issue and marks Phase C underway. (No code changes.)
+
 ## [0.2.0]
 
 ### Added

@@ -3,31 +3,65 @@
 A browser-native, **WebGPU** rendering engine that ports the visualization model of
 [napari](https://napari.org) (the Python multi-dimensional image viewer) to TypeScript.
 
-> **Status:** **v0.1.0 published to npm** (`npm install napari-js`). Phase B roadmap
-> (NJ-0…NJ-5+) complete — images (single/multi-channel/16-bit), tiled + z-stacks, points,
-> labels, and 3D volume raymarch (MIP / translucent / iso), plus readback / screenshot /
-> histogram. **v0.1.1** adds host-embedding APIs (`worldToCanvas`, `visibleWorldRect`,
-> `ResizeObserver` auto-resize), a dropdown multi-demo playground for browser verification, and
-> coverage tooling. **v0.2.0** adds device-loss recovery, uint8/16/32 labels, `ImageBitmap`
-> tile chunks, and per-channel native-bit-depth histograms (116 unit tests; see
-> [CHANGELOG](./CHANGELOG.md)). CI/CD (mirrors Cellpose.js) publishes on `vX.Y.Z` tags.
-> Next: Phase C — the `jit-ui` `IVisualizer` adapter ([docs/06](./docs/06-jit-ui-integration.md)).
-> Landscape & how this differs from other browser viewers: [docs/08](./docs/08-landscape-and-related-work.md).
+> **Status:** **published to npm — `npm install napari-js`** (latest: **v0.2.1**). napari-js
+> implements the POC called for in
+> [jit-ui#102](https://github.com/TheJacksonLaboratory/jit-ui/issues/102) — a browser-based
+> napari shipped as a JS library. Phase B (the renderer, NJ-0…NJ-5+) is complete and
+> browser-verified; Phase C (the `jax-image-visualization` `IVisualizer` backend) is underway.
+> See the [CHANGELOG](./CHANGELOG.md).
 
-## Quickstart
+## Features
+
+- **WebGPU rendering**, 100% client-side — no Python, Pyodide, WASM, or server.
+- **Image layers**: single- and multi-channel, `uint8` / `uint16` / `float32`, with live
+  colormap (LUT), contrast limits, gamma, invert, opacity, and blend modes
+  (`opaque` / `translucent` / `additive` / `minimum`).
+- **Tiled & pyramidal** large images with level-of-detail + an LRU GPU-tile cache, and
+  **z-stacks** — fed by a pluggable `TextureSource` (typed arrays or `ImageBitmap` tiles).
+- **Points** (instanced SDF markers) and **Labels** (`uint8`/`uint16`/`uint32` ids, cyclic palette).
+- **3D volume raymarching** — MIP, translucent, and iso-surface, with an orbit camera.
+- **Readback**: displayed-pixel readout, PNG screenshot, and per-channel histograms.
+- **Host-friendly**: device-loss recovery, `ResizeObserver` auto-resize, and
+  `canvasToWorld` / `worldToCanvas` / `visibleWorldRect` for overlays and picking.
+
+## Install & use
+
+```bash
+npm install napari-js
+```
+
+```ts
+import { Viewer } from 'napari-js';
+
+const viewer = new Viewer({ canvas: document.querySelector('canvas')! });
+await viewer.ready; // WebGPU device acquired
+
+// one layer per channel; composited additively on the GPU
+viewer.addImage(channel0, { colormap: 'green', blending: 'additive', contrastLimits: [0, 4095] });
+const dapi = viewer.addImage(channel1, { colormap: 'blue', blending: 'additive' });
+dapi.gamma = 0.8; // live — updates a uniform, no texture re-upload
+
+viewer.addPoints(points, { size: 12, faceColor: [1, 1, 0, 1] });
+viewer.addLabels(labelImage, width, height, { opacity: 0.5 });
+```
+
+A layer's data is any `TextureSource` input: an `ImageBitmap`, a typed-array descriptor
+(`{ kind: 'typed', width, height, channels, dtype, data }`), or a pyramidal
+`{ kind: 'tiled', …, fetchTile }`. Full API in [docs/02](./docs/02-public-api.md).
+
+## Develop
 
 ```bash
 npm install
-npm run dev        # open the printed URL in a WebGPU browser → see the demo quad
-npm test           # GPU-free unit tests (Vitest)
-npm run typecheck  # tsc --noEmit
-npm run lint       # eslint
-npm run build      # library bundle + types → dist/
+npm run dev          # serve the playground (dropdown: image · multi-channel · tiled · points+labels · volume)
+npm test             # GPU-free unit tests (Vitest)
+npm run test:coverage
+npm run typecheck && npm run lint && npm run format:check
+npm run build        # library bundle + types → dist/
 ```
 
-`npm run dev` serves `index.html` → `playground/main.ts`, which creates a `Viewer`, awaits
-its WebGPU device, and renders the NJ-0 demo. If WebGPU is unavailable the page shows the
-reason instead of crashing.
+`npm run dev` serves `index.html` → `playground/main.ts`. Pick a demo from the dropdown to
+verify each render path; if WebGPU is unavailable the page shows the reason instead of crashing.
 
 ## What this is
 
@@ -56,11 +90,12 @@ brings those strengths to the web as a reusable npm package.
 ~/git/jit-ui      Eventual consumer: jax-image-visualization adds a napari-js IVisualizer backend
 ```
 
-The first downstream consumer will be the `jax-image-visualization` library in the
-`jit-ui` monorepo, which will add napari-js as a new `IVisualizer` backend alongside its
-OpenSeadragon and Plotly backends. **That integration is a later phase** (see
-[`docs/06-jit-ui-integration.md`](./docs/06-jit-ui-integration.md)); napari-js is built
-and published independently first.
+The first downstream consumer is the `jax-image-visualization` library in the `jit-ui`
+monorepo ([jit-ui#102](https://github.com/TheJacksonLaboratory/jit-ui/issues/102)), which adds
+napari-js as a new `IVisualizer` backend alongside its OpenSeadragon and Plotly backends — to
+swap 2D image plotting with OSD and 3D slicing / isosurfaces with Plotly. napari-js is built
+and published independently; that integration (Phase C) is described in
+[`docs/06-jit-ui-integration.md`](./docs/06-jit-ui-integration.md).
 
 ## Docs
 

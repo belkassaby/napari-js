@@ -1,8 +1,12 @@
-# 06 — jit-ui integration (Phase C — deferred)
+# 06 — jit-ui integration (Phase C)
 
-> **This phase begins only after the napari-js port is usable (≈ NJ-4, published to npm).**
-> It is documented now so the napari-js API (doc 02) is designed with the consumer in mind,
-> but no jit-ui code is written until Phase B delivers.
+> Tracking issue: [jit-ui#102](https://github.com/TheJacksonLaboratory/jit-ui/issues/102) —
+> "Research/Implement POC for a browser-based napari … shipped as a JS library (napari-js) …
+> a new engine in jax-image-visualization to swap image plotting with OpenSeadragon and 3D
+> slicing / isosurfaces with Plotly."
+>
+> Phase B is published (napari-js on npm); this integration is now **underway**. The napari-js
+> API (doc 02) was designed with this consumer in mind.
 
 ## Goal
 
