@@ -74,6 +74,10 @@ and published independently first.
 | [06 — jit-ui integration](./docs/06-jit-ui-integration.md) | Phase C: the `IVisualizer` adapter in jax-image-visualization (deferred) |
 | [07 — napari concept mapping](./docs/07-napari-concept-mapping.md) | How each napari concept maps to napari-js |
 
+## Acknowledgments
+
+Built with the help of Claude Opus 4.8 (Anthropic).
+
 ## License
 
 [MIT](./LICENSE) © Baha Elkassaby
