@@ -8,6 +8,8 @@ import { attachCameraControls } from './camera/controls';
 import { ImageLayer, type ImageLayerOptions } from './layers/image-layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
 import type { Dims } from './scene/dims';
+import { readTextureToRGBA, type PixelData } from './engine/readback';
+import { histogramRGBA, type Histogram } from './color/histogram';
 
 export interface ViewerOptions {
   canvas: HTMLCanvasElement;
@@ -122,10 +124,65 @@ export class Viewer {
   private renderFrame(): void {
     if (!this.renderer || !this.target) return;
     this.target.syncSize();
-    const layers = this.model.layers.items.filter(
-      (l): l is ImageLayer => l instanceof ImageLayer,
+    this.renderer.render(this.model.camera, this.imageLayers(), this.model.dims.z, this.background);
+  }
+
+  private imageLayers(): ImageLayer[] {
+    return this.model.layers.items.filter((l): l is ImageLayer => l instanceof ImageLayer);
+  }
+
+  /**
+   * Read back the composited displayed pixels as RGBA8 (top row first), by rendering the
+   * current scene into an offscreen texture at the canvas's device-pixel size.
+   */
+  async readDisplayedPixels(): Promise<PixelData> {
+    if (!this.renderer || !this.target || !this.ctx) {
+      throw new Error('Viewer is not ready — await `viewer.ready` first.');
+    }
+    const w = Math.max(1, this.canvas.width);
+    const h = Math.max(1, this.canvas.height);
+    const cssW = this.canvas.clientWidth || w;
+    const cssH = this.canvas.clientHeight || h;
+    const texture = this.ctx.device.createTexture({
+      size: [w, h],
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+    });
+    this.renderer.renderInto(
+      texture.createView(), cssW, cssH, this.model.camera, this.imageLayers(), this.model.dims.z, this.background,
     );
-    this.renderer.render(this.model.camera, layers, this.model.dims.z, this.background);
+    const data = await readTextureToRGBA(this.ctx.device, texture, w, h);
+    texture.destroy();
+    return { width: w, height: h, channels: 4, data };
+  }
+
+  /** Composite the displayed image to a PNG `Blob`. */
+  async screenshot(): Promise<Blob> {
+    const px = await this.readDisplayedPixels();
+    if (typeof OffscreenCanvas !== 'undefined') {
+      const off = new OffscreenCanvas(px.width, px.height);
+      const ctx = off.getContext('2d')!;
+      const image = ctx.createImageData(px.width, px.height);
+      image.data.set(px.data);
+      ctx.putImageData(image, 0, 0);
+      return off.convertToBlob({ type: 'image/png' });
+    }
+    const el = document.createElement('canvas');
+    el.width = px.width;
+    el.height = px.height;
+    const ctx = el.getContext('2d')!;
+    const image = ctx.createImageData(px.width, px.height);
+    image.data.set(px.data);
+    ctx.putImageData(image, 0, 0);
+    return new Promise<Blob>((resolve, reject) => {
+      el.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob returned null'))), 'image/png');
+    });
+  }
+
+  /** Luminance histogram (over `bins` bins) of the currently displayed composite. */
+  async histogram(bins = 256): Promise<Histogram> {
+    const px = await this.readDisplayedPixels();
+    return histogramRGBA(px.data, bins);
   }
 
   dispose(): void {

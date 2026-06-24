@@ -54,14 +54,25 @@ async function main(): Promise<void> {
 
   viewer.addImage(source, { colormap: 'viridis', contrastLimits: [0, 255] });
 
-  const help = 'drag = pan · wheel = zoom (LOD) · ↑/↓ = z-slice';
-  const status = (): string => `napari-js ${VERSION} — NJ-3 tiled ${FULL}² · z ${viewer.dims.z}/${DEPTH - 1} · ${help}`;
+  const help = 'drag = pan · wheel = zoom (LOD) · ↑/↓ = z · s = screenshot · h = histogram';
+  const status = (): string => `napari-js ${VERSION} — NJ-4 tiled ${FULL}² · z ${viewer.dims.z}/${DEPTH - 1} · ${help}`;
   msg.textContent = status();
 
-  window.addEventListener('keydown', (e) => {
+  window.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowUp') viewer.dims.z += 1;
     else if (e.key === 'ArrowDown') viewer.dims.z -= 1;
-    else return;
+    else if (e.key === 's') {
+      const blob = await viewer.screenshot();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'napari-js.png';
+      a.click();
+      URL.revokeObjectURL(url);
+    } else if (e.key === 'h') {
+      const hist = await viewer.histogram(16);
+      console.log('luminance histogram (16 bins):', Array.from(hist.counts));
+    } else return;
     msg.textContent = status();
   });
   window.addEventListener('resize', () => viewer.requestRender());

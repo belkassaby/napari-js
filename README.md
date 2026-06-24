@@ -3,14 +3,14 @@
 A browser-native, **WebGPU** rendering engine that ports the visualization model of
 [napari](https://napari.org) (the Python multi-dimensional image viewer) to TypeScript.
 
-> **Status:** **NJ-3 complete** — tiled/pyramidal large images + z-stacks. A `TiledSource`
-> (`fetchTile(level,col,row,z)`) renders multi-gigapixel images via level-of-detail
-> selection, an LRU GPU-tile cache, a coarse base underlay (no blank flashes), and async
-> progressive loading; a `Dims` model drives z-scrubbing (slices cached by z). Builds on
-> NJ-1/NJ-2 (model, `image-colormap` pipeline, multi-channel + 16-bit). Pure pyramid/LRU/dims
-> logic is unit-tested. All gates green (typecheck / lint / 57 unit tests / build). Next:
-> **NJ-4** — pixel readback, screenshot, histogram, and the v0.1 npm publish. See the
-> [roadmap](./docs/05-roadmap.md); design rationale lives in [`docs/`](./docs).
+> **Status:** **NJ-4 complete (v0.1.0), pending publish.** Added GPU readback —
+> `viewer.readDisplayedPixels()` (RGBA8 composite via an offscreen render + buffer map),
+> `viewer.screenshot()` (PNG `Blob`), and `viewer.histogram(bins)` (luminance, from a pure
+> `histogramRGBA`). Package metadata, `files`, `exports`, and `prepublishOnly` are set;
+> `npm pack --dry-run` ships only `dist/`. The public API is the v0.1 surface (see
+> [docs/02](./docs/02-public-api.md)). All gates green (typecheck / lint / 63 unit tests /
+> build). **Remaining manual step:** `npm publish` (needs registry auth). Next: **NJ-5** —
+> Points + Labels layers. See the [roadmap](./docs/05-roadmap.md).
 
 ## Quickstart
 

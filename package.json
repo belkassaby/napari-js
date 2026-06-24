@@ -1,9 +1,11 @@
 {
   "name": "napari-js",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "WebGPU rendering engine porting napari's visualization model to the browser.",
   "type": "module",
   "license": "UNLICENSED",
+  "sideEffects": false,
+  "keywords": ["webgpu", "napari", "image", "visualization", "microscopy", "rendering"],
   "files": ["dist"],
   "main": "./dist/napari-js.js",
   "module": "./dist/napari-js.js",
@@ -21,7 +23,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.44",

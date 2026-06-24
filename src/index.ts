@@ -5,6 +5,11 @@ export { Viewer } from './viewer';
 export type { ViewerOptions } from './viewer';
 export { acquireDevice, WebGPUUnsupportedError } from './engine/device';
 export type { DeviceContext, DeviceFeatures } from './engine/device';
+export type { PixelData } from './engine/readback';
+
+// Readback / analysis
+export { histogramRGBA, luminance8 } from './color/histogram';
+export type { Histogram } from './color/histogram';
 
 // Model
 export { ViewerModel } from './scene/viewer-model';

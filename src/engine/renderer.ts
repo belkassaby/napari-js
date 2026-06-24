@@ -48,7 +48,7 @@ export class Renderer {
     return this.visuals.has(id);
   }
 
-  /** Draw the given layers (in order) for the current camera and z-slice. */
+  /** Draw the given layers (in order) into the swapchain for the current camera and z-slice. */
   render(
     camera: Camera,
     layers: readonly ImageLayer[],
@@ -57,12 +57,26 @@ export class Renderer {
   ): void {
     const vw = this.target.canvas.clientWidth || this.target.canvas.width;
     const vh = this.target.canvas.clientHeight || this.target.canvas.height;
+    this.renderInto(this.target.view, vw, vh, camera, layers, z, background);
+  }
 
+  /**
+   * Draw into an arbitrary color-attachment view. `vw`/`vh` are the CSS-pixel projection size
+   * (resolution-independent); the attachment may be a different device-pixel size. Used both
+   * for the swapchain and for offscreen readback.
+   */
+  renderInto(
+    view: GPUTextureView,
+    vw: number,
+    vh: number,
+    camera: Camera,
+    layers: readonly ImageLayer[],
+    z: number,
+    background: GPUColor = { r: 0.07, g: 0.07, b: 0.09, a: 1 },
+  ): void {
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        { view: this.target.view, clearValue: background, loadOp: 'clear', storeOp: 'store' },
-      ],
+      colorAttachments: [{ view, clearValue: background, loadOp: 'clear', storeOp: 'store' }],
     });
     for (const layer of layers) {
       if (!layer.visible) continue;
