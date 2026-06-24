@@ -1,68 +1,69 @@
-import { CanvasTarget } from './canvas';
-import { QUAD_SHADER } from '../visuals/shaders';
-import { makeCheckerboard } from '../color/checkerboard';
+import type { CanvasTarget } from './canvas';
+import type { Camera } from '../camera/camera';
+import { ImageLayer } from '../layers/image-layer';
+import { ImageVisual } from '../visuals/image-visual';
 
 /**
- * NJ-0 demo renderer: clears the swapchain and draws a single textured quad. Its purpose is
- * to exercise the whole pipeline end-to-end — shader module, render pipeline, texture upload,
- * sampler, bind group, render pass, present — proving the WebGPU bootstrap works. It is
- * replaced by the layer/visual renderer in NJ-1.
+ * Scene renderer: owns one {@link ImageVisual} per layer and draws them in order each frame.
+ * Layer lifecycle is driven by the {@link Viewer} (add/remove); this class only knows how to
+ * upload, sync, and draw.
  */
-export class DemoRenderer {
-  private readonly pipeline: GPURenderPipeline;
-  private readonly bindGroup: GPUBindGroup;
+export class Renderer {
+  private readonly visuals = new Map<string, ImageVisual>();
 
   constructor(
     private readonly device: GPUDevice,
     private readonly target: CanvasTarget,
-  ) {
-    const module = device.createShaderModule({ code: QUAD_SHADER });
-    this.pipeline = device.createRenderPipeline({
-      layout: 'auto',
-      vertex: { module, entryPoint: 'vs' },
-      fragment: { module, entryPoint: 'fs', targets: [{ format: target.format }] },
-      primitive: { topology: 'triangle-list' },
-    });
+  ) {}
 
-    const size = 256;
-    const texture = device.createTexture({
-      size: [size, size],
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-    });
-    device.queue.writeTexture(
-      { texture },
-      makeCheckerboard(size, 8),
-      { bytesPerRow: size * 4, rowsPerImage: size },
-      { width: size, height: size },
-    );
-
-    const sampler = device.createSampler({ magFilter: 'nearest', minFilter: 'nearest' });
-    this.bindGroup = device.createBindGroup({
-      layout: this.pipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: sampler },
-        { binding: 1, resource: texture.createView() },
-      ],
-    });
+  addLayer(layer: ImageLayer): void {
+    if (this.visuals.has(layer.id)) return;
+    this.visuals.set(layer.id, new ImageVisual(this.device, this.target.format, layer));
   }
 
-  render(clear: GPUColor = { r: 0.07, g: 0.07, b: 0.09, a: 1 }): void {
+  removeLayer(id: string): void {
+    this.visuals.get(id)?.dispose();
+    this.visuals.delete(id);
+  }
+
+  has(id: string): boolean {
+    return this.visuals.has(id);
+  }
+
+  /** Draw the given layers (in order) for the current camera. */
+  render(
+    camera: Camera,
+    layers: readonly ImageLayer[],
+    background: GPUColor = { r: 0.07, g: 0.07, b: 0.09, a: 1 },
+  ): void {
+    // CSS pixels drive the projection (resolution-independent); the framebuffer is device px.
+    const vw = this.target.canvas.clientWidth || this.target.canvas.width;
+    const vh = this.target.canvas.clientHeight || this.target.canvas.height;
+
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
           view: this.target.view,
-          clearValue: clear,
+          clearValue: background,
           loadOp: 'clear',
           storeOp: 'store',
         },
       ],
     });
-    pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
-    pass.draw(6);
+    for (const layer of layers) {
+      if (!layer.visible) continue;
+      const visual = this.visuals.get(layer.id);
+      if (!visual) continue;
+      visual.sync();
+      visual.draw(pass, camera, vw, vh);
+    }
     pass.end();
     this.device.queue.submit([encoder.finish()]);
+  }
+
+  dispose(): void {
+    for (const visual of this.visuals.values()) visual.dispose();
+    this.visuals.clear();
   }
 }

@@ -3,10 +3,13 @@
 A browser-native, **WebGPU** rendering engine that ports the visualization model of
 [napari](https://napari.org) (the Python multi-dimensional image viewer) to TypeScript.
 
-> **Status:** **NJ-0 complete** — project scaffold + WebGPU bootstrap (device/canvas/render
-> loop) drawing a demo textured quad, with passing typecheck / lint / unit tests / library
-> build. Next is **NJ-1** (single-channel `ImageLayer` + camera). See the
-> [roadmap](./docs/05-roadmap.md); design rationale lives in [`docs/`](./docs).
+> **Status:** **NJ-1 complete** — the model is real: a headless `Viewer`/`ViewerModel`
+> (layers + camera + events), an `ImageLayer` with live colormap / contrast / gamma / invert,
+> the `image-colormap` WGSL pipeline (window→invert→gamma→LUT, RGBA passthrough), a 2D
+> pan/zoom camera with pointer+wheel controls, and a scene renderer. `addImage()` loads typed
+> `uint8` pixels or a decoded image. All gates green (typecheck / lint / 27 unit tests /
+> build). Next: **NJ-2** — multi-channel additive compositing + 16-bit/native windowing. See
+> the [roadmap](./docs/05-roadmap.md); design rationale lives in [`docs/`](./docs).
 
 ## Quickstart
 
