@@ -1,5 +1,9 @@
 import type { Camera } from './camera';
 
+/** Wheel-zoom sensitivity: zoom multiplier per (normalized, clamped) wheel-delta unit, applied as
+ *  exp(-delta * speed). Tuned for a gentle, smooth zoom across mice and trackpads. */
+const WHEEL_ZOOM_SPEED = 0.002;
+
 /**
  * Attach pointer-drag panning and wheel zoom (zoom about the cursor) to a canvas. Returns a
  * detach function. World/screen conversion uses the camera's current center+zoom and the
@@ -47,7 +51,13 @@ export function attachCameraControls(canvas: HTMLCanvasElement, camera: Camera):
     // World point under the cursor before zoom.
     const wx = cx + px / zoom;
     const wy = cy + py / zoom;
-    const factor = Math.exp(-e.deltaY * 0.0015);
+    // Normalize the wheel delta across devices (line/page deltaMode) and clamp per event so a
+    // high-resolution mouse wheel or trackpad momentum zooms smoothly instead of in large jumps.
+    let delta = e.deltaY;
+    if (e.deltaMode === 1) delta *= 16; // lines → ~px
+    else if (e.deltaMode === 2) delta *= rect.height || 800; // pages → ~px
+    delta = Math.max(-40, Math.min(40, delta));
+    const factor = Math.exp(-delta * WHEEL_ZOOM_SPEED);
     const newZoom = zoom * factor;
     // Keep that world point under the cursor after zoom.
     camera.set([wx - px / newZoom, wy - py / newZoom], newZoom);

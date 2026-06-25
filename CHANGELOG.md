@@ -3,6 +3,14 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.4.2]
+
+### Changed
+
+- **Gentler wheel zoom** — the 2D wheel-zoom handler now normalizes the wheel delta across devices
+  (line/page `deltaMode`) and clamps it per event, so high-resolution mice and trackpad momentum
+  zoom smoothly instead of in large, over-sensitive jumps. Sensitivity is a single tunable constant.
+
 ## [0.4.1]
 
 ### Fixed
