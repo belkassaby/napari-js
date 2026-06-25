@@ -3,6 +3,17 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.4.1]
+
+### Fixed
+
+- **Readback format mismatch** — `readDisplayedPixels()` (and `screenshot()`/`histogram()`, which
+  build on it) rendered into a hardcoded `rgba8unorm` texture while the layer pipelines are built
+  for the canvas/swapchain format. On platforms whose preferred canvas format is `bgra8unorm`
+  (e.g. Metal) this produced a WebGPU validation error ("attachment state … is not compatible")
+  on every readback. The readback texture now uses the target format and `readTextureToRGBA`
+  swizzles BGRA→RGBA, so callers still get RGBA bytes.
+
 ## [0.4.0]
 
 ### Added

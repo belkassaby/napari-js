@@ -309,9 +309,14 @@ export class Viewer {
     const h = Math.max(1, this.canvas.height);
     const cssW = this.canvas.clientWidth || w;
     const cssH = this.canvas.clientHeight || h;
+    // Use the canvas/swapchain format (e.g. bgra8unorm on Metal) so the offscreen pass matches the
+    // layer pipelines, which are built for the target format — a mismatch (e.g. forcing rgba8unorm)
+    // makes the readback render pass incompatible with the pipelines. readTextureToRGBA swizzles
+    // BGRA→RGBA so callers always get RGBA bytes.
+    const format = this.target?.format ?? 'rgba8unorm';
     const texture = this.ctx.device.createTexture({
       size: [w, h],
-      format: 'rgba8unorm',
+      format,
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     });
     this.renderer.renderInto(
@@ -322,7 +327,7 @@ export class Viewer {
       cssH,
       this.background,
     );
-    const data = await readTextureToRGBA(this.ctx.device, texture, w, h);
+    const data = await readTextureToRGBA(this.ctx.device, texture, w, h, format);
     texture.destroy();
     return { width: w, height: h, channels: 4, data };
   }
