@@ -255,11 +255,11 @@ export class TiledImageVisual implements LayerVisual {
   }
 
   draw(pass: GPURenderPassEncoder, rv: RenderView): void {
-    const { width, height, tileSize, levels } = this.source;
+    const { width, height, tileSize, levels, levelScales } = this.source;
     const cam = rv.camera2d;
     const z = rv.z;
     const view = worldViewport(cam.center[0], cam.center[1], cam.zoom, rv.vw, rv.vh);
-    const target = selectLevel(cam.zoom, levels);
+    const target = selectLevel(cam.zoom, levels, levelScales);
     const mvp = multiply(
       cam.viewProjection(rv.vw, rv.vh),
       scaleTranslate2d(
@@ -275,14 +275,14 @@ export class TiledImageVisual implements LayerVisual {
     // Coarse base underlay (skip for additive blending, where double-counting would be wrong).
     const coarse = levels - 1;
     if (this.layer.blending !== 'additive' && target !== coarse) {
-      for (const tile of visibleTiles(view, width, height, coarse, tileSize)) {
+      for (const tile of visibleTiles(view, width, height, coarse, tileSize, levelScales)) {
         const entry = this.ensureTile(coarse, tile.col, tile.row, z);
         if (entry) this.drawTile(pass, entry, mvp, tile);
       }
     }
 
     // Target level: draw ready tiles; kick fetches for the rest.
-    for (const tile of visibleTiles(view, width, height, target, tileSize)) {
+    for (const tile of visibleTiles(view, width, height, target, tileSize, levelScales)) {
       const entry = this.ensureTile(target, tile.col, tile.row, z);
       if (entry) this.drawTile(pass, entry, mvp, tile);
     }

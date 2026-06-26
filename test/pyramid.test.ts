@@ -64,6 +64,29 @@ describe('visibleTiles', () => {
   });
 });
 
+describe('arbitrary (non-power-of-two) level scales', () => {
+  // A Bio-Formats-style pyramid: full res, then 4× and 16× downsamples (not 2×).
+  const scales = [1, 4, 16];
+
+  it('selectLevel picks the coarsest level that does not under-sample', () => {
+    expect(selectLevel(1, 3, scales)).toBe(0); // 1/zoom=1 → only level 0 (scale 1) fits
+    expect(selectLevel(0.25, 3, scales)).toBe(1); // 1/zoom=4 → level 1 (scale 4)
+    expect(selectLevel(1 / 16, 3, scales)).toBe(2); // 1/zoom=16 → level 2 (scale 16)
+    expect(selectLevel(1 / 64, 3, scales)).toBe(2); // beyond coarsest → clamp to last
+  });
+
+  it('levelDims / tileGrid use the explicit factor', () => {
+    expect(levelDims(2048, 2048, 1, scales)).toEqual({ width: 512, height: 512 }); // 2048/4
+    expect(tileGrid(2048, 2048, 1, 256, scales)).toEqual({ cols: 2, rows: 2 });
+  });
+
+  it('visibleTiles scales tile extents by the explicit factor', () => {
+    // Level 1 (4×): each 256px tile covers 256*4 = 1024 level-0 units.
+    const tiles = visibleTiles({ x: 0, y: 0, width: 10, height: 10 }, 2048, 2048, 1, 256, scales);
+    expect(tiles[0]).toMatchObject({ col: 0, row: 0, x: 0, y: 0, w: 1024, h: 1024 });
+  });
+});
+
 describe('worldViewport', () => {
   it('is centered on the camera and scales inversely with zoom', () => {
     expect(worldViewport(100, 50, 2, 800, 600)).toEqual({

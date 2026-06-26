@@ -3,6 +3,17 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.5.0]
+
+### Added
+
+- **Arbitrary (non-power-of-two) tiled pyramids** — `TiledSource.levelScales?: number[]` supplies an
+  explicit per-level downsample factor (level-0 units per level pixel, ascending). The pyramid
+  helpers (`levelScale`/`levelDims`/`tileGrid`/`visibleTiles`/`selectLevel`) and `TiledImageVisual`
+  honour it, so a server pyramid with arbitrary level ratios (e.g. Bio-Formats / `/tiles/info`)
+  renders with correct level selection and tile placement, refining to higher resolution on zoom.
+  Omit it for the classic power-of-two behaviour (unchanged).
+
 ## [0.4.2]
 
 ### Changed

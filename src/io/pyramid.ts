@@ -16,9 +16,15 @@ export interface VisibleTile {
   h: number;
 }
 
-/** Downsample factor of a pyramid level (level 0 = 1, level 1 = 2, …). */
-export function levelScale(level: number): number {
-  return 2 ** level;
+/**
+ * Downsample factor of a pyramid level — level-0 units per level pixel. With `scales` it's the
+ * explicit factor for `level` (arbitrary, non-power-of-two pyramids such as Bio-Formats); without
+ * it the classic power-of-two default (level 0 = 1, level 1 = 2, …). `scales` is expected ascending
+ * (level 0 finest = smallest factor).
+ */
+export function levelScale(level: number, scales?: readonly number[]): number {
+  const s = scales?.[level];
+  return s != null && s > 0 ? s : 2 ** level;
 }
 
 /** Pixel dimensions of a pyramid level. */
@@ -26,8 +32,9 @@ export function levelDims(
   width: number,
   height: number,
   level: number,
+  scales?: readonly number[],
 ): { width: number; height: number } {
-  const s = levelScale(level);
+  const s = levelScale(level, scales);
   return { width: Math.max(1, Math.ceil(width / s)), height: Math.max(1, Math.ceil(height / s)) };
 }
 
@@ -37,17 +44,28 @@ export function tileGrid(
   height: number,
   level: number,
   tileSize: number,
+  scales?: readonly number[],
 ): { cols: number; rows: number } {
-  const d = levelDims(width, height, level);
+  const d = levelDims(width, height, level, scales);
   return { cols: Math.ceil(d.width / tileSize), rows: Math.ceil(d.height / tileSize) };
 }
 
 /**
  * Choose the pyramid level whose texels are ≈1 screen pixel for `zoom` (CSS px per level-0
- * unit). Zoomed in (zoom ≥ 1) → level 0; each halving of zoom steps one level coarser.
- * Clamped to `[0, levels-1]`.
+ * unit). With `scales`, pick the coarsest level whose downsample factor doesn't under-sample the
+ * screen (factor ≤ 1/zoom); without it, the power-of-two default (each halving of zoom steps one
+ * level coarser). Clamped to `[0, levels-1]`.
  */
-export function selectLevel(zoom: number, levels: number): number {
+export function selectLevel(zoom: number, levels: number, scales?: readonly number[]): number {
+  if (scales && scales.length) {
+    const inv = 1 / Math.max(zoom, 1e-9); // level-0 units per screen pixel
+    let best = 0;
+    for (let l = 0; l < scales.length && l < levels; l++) {
+      if (scales[l] <= inv) best = l;
+      else break; // ascending → no finer-than-needed level beyond here
+    }
+    return Math.min(levels - 1, Math.max(0, best));
+  }
   const raw = Math.floor(Math.log2(1 / Math.max(zoom, 1e-9)));
   return Math.min(levels - 1, Math.max(0, raw));
 }
@@ -75,9 +93,10 @@ export function visibleTiles(
   height: number,
   level: number,
   tileSize: number,
+  scales?: readonly number[],
 ): VisibleTile[] {
-  const tw = tileSize * levelScale(level);
-  const { cols, rows } = tileGrid(width, height, level, tileSize);
+  const tw = tileSize * levelScale(level, scales);
+  const { cols, rows } = tileGrid(width, height, level, tileSize, scales);
 
   const x0 = Math.max(0, view.x);
   const y0 = Math.max(0, view.y);

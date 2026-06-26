@@ -60,6 +60,12 @@ export interface TiledSource {
   readonly height: number;
   readonly tileSize: number;
   readonly levels: number;
+  /**
+   * Per-level downsample factors (level-0 units per level pixel), ascending — level 0 is finest
+   * (factor 1). Supply this for arbitrary, non-power-of-two pyramids (e.g. Bio-Formats / a server's
+   * `/tiles/info` levels); omit it for a classic power-of-two pyramid (`2^level`).
+   */
+  readonly levelScales?: number[];
   readonly depth: number;
   readonly channels: 1 | 4;
   readonly dtype: PixelDtype;
