@@ -4,7 +4,7 @@ import { Renderer } from './engine/renderer';
 import { ViewerModel } from './scene/viewer-model';
 import type { Camera } from './camera/camera';
 import type { LayerList } from './scene/layer-list';
-import { attachCameraControls } from './camera/controls';
+import { attachCameraControls, type CameraControlOptions } from './camera/controls';
 import { ImageLayer, type ImageLayerOptions } from './layers/image-layer';
 import { PointsLayer, type PointsLayerOptions } from './layers/points-layer';
 import { LabelsLayer, type LabelsLayerOptions, type LabelData } from './layers/labels-layer';
@@ -27,6 +27,10 @@ export interface ViewerOptions {
   controls?: boolean;
   /** Observe the canvas with a ResizeObserver and redraw on size changes (default true). */
   autoResize?: boolean;
+  /** Wheel-zoom sensitivity (smaller = gentler); see {@link CameraControlOptions}. */
+  wheelZoomSpeed?: number;
+  /** Click-to-zoom step (default 2× in / 0.5× out; 0 disables). */
+  clickZoomFactor?: number;
 }
 
 /**
@@ -42,6 +46,7 @@ export class Viewer {
   private readonly background: GPUColor;
   private controlsEnabled: boolean;
   private readonly autoResize: boolean;
+  private readonly cameraControlOpts: CameraControlOptions;
 
   private ctx?: DeviceContext;
   private target?: CanvasTarget;
@@ -58,6 +63,10 @@ export class Viewer {
     this.background = options.background ?? { r: 0.07, g: 0.07, b: 0.09, a: 1 };
     this.controlsEnabled = options.controls ?? true;
     this.autoResize = options.autoResize ?? true;
+    this.cameraControlOpts = {
+      wheelZoomSpeed: options.wheelZoomSpeed,
+      clickZoomFactor: options.clickZoomFactor,
+    };
     this.ready = this.init();
   }
 
@@ -159,7 +168,7 @@ export class Viewer {
     this.detachControls =
       nd === 3
         ? attachOrbitControls(this.canvas, this.model.camera3d)
-        : attachCameraControls(this.canvas, this.model.camera);
+        : attachCameraControls(this.canvas, this.model.camera, this.cameraControlOpts);
   }
 
   /**

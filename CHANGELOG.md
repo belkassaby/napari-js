@@ -3,6 +3,19 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.5.1]
+
+### Added
+
+- **Click-to-zoom** — a plain left click zooms in about the cursor; a right click or modifier-click
+  (shift/ctrl/alt/meta) zooms out; a left drag still pans (and never triggers click-zoom). Tunable
+  via `ViewerOptions.clickZoomFactor` (default 2×; 0 disables). Mirrors OpenSeadragon's click-zoom.
+
+### Changed
+
+- **Gentler, tunable wheel zoom** — lower default sensitivity + a tighter per-event delta clamp so
+  high-resolution mice / trackpad momentum zoom smoothly. Override via `ViewerOptions.wheelZoomSpeed`.
+
 ## [0.5.0]
 
 ### Added
