@@ -100,3 +100,43 @@ export function resolveColormap(cmap: Colormap | string): Colormap {
   }
   return found;
 }
+
+/**
+ * Build a `Colormap` from a lookup table of RGB triples (bytes 0..`maxValue`, default 255),
+ * with evenly spaced stops (`t = i / (len - 1)`). Useful for an arbitrary LUT produced outside
+ * the named-colormap registry — e.g. a UI colormap picker that yields 256 RGB rows, or a reversed
+ * ramp. Needs at least two entries.
+ */
+export function colormapFromLut(
+  name: string,
+  lut: ReadonlyArray<readonly [number, number, number]>,
+  maxValue = 255,
+): Colormap {
+  if (lut.length < 2) {
+    throw new Error(`colormapFromLut("${name}") needs at least two LUT entries.`);
+  }
+  const m = maxValue || 255;
+  const n = lut.length;
+  const stops: ColorStop[] = lut.map((c, i) => ({
+    t: i / (n - 1),
+    color: [c[0] / m, c[1] / m, c[2] / m] as RGB,
+  }));
+  return new Colormap(name, stops);
+}
+
+/**
+ * Build a black→`hex` ramp `Colormap` — a channel "tint" for additive multichannel compositing
+ * (fluorescence). Accepts `#rgb` / `#rrggbb` (the leading `#` is optional); unparseable channels
+ * fall back to 0, and an empty/missing value defaults to white.
+ */
+export function tintColormap(hex: string): Colormap {
+  const h = (hex || '#ffffff').replace('#', '');
+  const full = h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h;
+  const r = parseInt(full.slice(0, 2), 16) || 0;
+  const g = parseInt(full.slice(2, 4), 16) || 0;
+  const b = parseInt(full.slice(4, 6), 16) || 0;
+  return new Colormap(`tint-${full}`, [
+    { t: 0, color: [0, 0, 0] },
+    { t: 1, color: [r / 255, g / 255, b / 255] },
+  ]);
+}

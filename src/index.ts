@@ -34,6 +34,8 @@ export { nearestPointIndex } from './picking/pick';
 export {
   Colormap,
   resolveColormap,
+  colormapFromLut,
+  tintColormap,
   NAMED_COLORMAPS,
   GRAY,
   RED,
@@ -46,6 +48,16 @@ export type { RGB, ColorStop } from './color/colormap';
 export { buildLut, LUT_SIZE } from './color/lut';
 export { buildLabelLut } from './color/label-colormap';
 export { windowGamma, mapScalar, additiveComposite } from './color/display-pipeline';
+
+// High-level views
+export { MultiChannelImageView } from './views/multichannel-image-view';
+export type {
+  ChannelMode,
+  ChannelView,
+  ChannelUpdate,
+  MultiChannelRenderOptions,
+  ImageLayerHost,
+} from './views/multichannel-image-view';
 
 // Data sources
 export {
