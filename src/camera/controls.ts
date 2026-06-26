@@ -54,7 +54,8 @@ export function attachCameraControls(canvas: HTMLCanvasElement, camera: Camera):
     // Normalize the wheel delta across devices (line/page deltaMode) and clamp per event so a
     // high-resolution mouse wheel or trackpad momentum zooms smoothly instead of in large jumps.
     let delta = e.deltaY;
-    if (e.deltaMode === 1) delta *= 16; // lines → ~px
+    if (e.deltaMode === 1)
+      delta *= 16; // lines → ~px
     else if (e.deltaMode === 2) delta *= rect.height || 800; // pages → ~px
     delta = Math.max(-40, Math.min(40, delta));
     const factor = Math.exp(-delta * WHEEL_ZOOM_SPEED);
