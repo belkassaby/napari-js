@@ -9,6 +9,7 @@ import { ImageLayer, type ImageLayerOptions } from './layers/image-layer';
 import { PointsLayer, type PointsLayerOptions } from './layers/points-layer';
 import { LabelsLayer, type LabelsLayerOptions, type LabelData } from './layers/labels-layer';
 import { VolumeLayer, type VolumeLayerOptions } from './layers/volume-layer';
+import { AxesLayer, type AxesLayerOptions } from './layers/axes-layer';
 import type { Layer } from './layers/layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
 import { worldViewport, type Rect } from './io/pyramid';
@@ -241,6 +242,16 @@ export class Viewer {
     this.model.layers.add(layer);
     this.model.camera3d.frame(width, height, depth);
     this.model.dims.ndisplay = 3;
+    return layer;
+  }
+
+  /**
+   * Add a 3D coordinate-axes / scale gizmo sized to a `[width,height,depth]` volume (it shares
+   * the volume's centred world box). Renders only in 3D; toggle with `layer.visible`.
+   */
+  addAxes(width: number, height: number, depth: number, opts: AxesLayerOptions = {}): AxesLayer {
+    const layer = new AxesLayer(width, height, depth, opts);
+    this.model.layers.add(layer);
     return layer;
   }
 

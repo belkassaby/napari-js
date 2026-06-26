@@ -28,6 +28,8 @@ export { LabelsLayer } from './layers/labels-layer';
 export type { LabelsLayerOptions, LabelData } from './layers/labels-layer';
 export { VolumeLayer } from './layers/volume-layer';
 export type { VolumeLayerOptions, VolumeRendering } from './layers/volume-layer';
+export { AxesLayer, axesLineVertices } from './layers/axes-layer';
+export type { AxesLayerOptions, AxesColors } from './layers/axes-layer';
 export { nearestPointIndex } from './picking/pick';
 
 // Color
