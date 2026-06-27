@@ -38,6 +38,7 @@ export {
   resolveColormap,
   colormapFromLut,
   tintColormap,
+  reverseColormap,
   NAMED_COLORMAPS,
   GRAY,
   RED,
@@ -60,6 +61,14 @@ export type {
   MultiChannelRenderOptions,
   ImageLayerHost,
 } from './views/multichannel-image-view';
+export { MultiChannelVolumeView } from './views/multichannel-volume-view';
+export type {
+  VolumeMode,
+  VolumeChannel,
+  VolumeChannelUpdate,
+  MultiChannelVolumeRenderOptions,
+  VolumeHost,
+} from './views/multichannel-volume-view';
 
 // Data sources
 export {

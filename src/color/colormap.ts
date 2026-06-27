@@ -140,3 +140,16 @@ export function tintColormap(hex: string): Colormap {
     { t: 1, color: [r / 255, g / 255, b / 255] },
   ]);
 }
+
+/**
+ * Reverse a colormap's ramp (a flipped LUT) — `t → 1 - t` on every stop. Resolves a named
+ * colormap to its stops first. Useful to emulate invert / reverse-scale where a layer has no
+ * per-layer invert flag (e.g. {@link VolumeLayer}).
+ */
+export function reverseColormap(cmap: Colormap | string): Colormap {
+  const c = cmap instanceof Colormap ? cmap : resolveColormap(cmap);
+  return new Colormap(
+    `${c.name}-reversed`,
+    c.stops.map((s) => ({ t: 1 - s.t, color: s.color })),
+  );
+}
