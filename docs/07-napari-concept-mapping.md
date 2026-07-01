@@ -16,15 +16,15 @@ A reference for porters: where each napari (Python) concept lives, and its napar
 
 ## Layers
 
-| napari layer (`layers/`)                 | napari-js                                | Milestone |
-| ---------------------------------------- | ---------------------------------------- | --------- |
-| `Image` (`layers/image/image.py`)        | `ImageLayer` (`layers/image-layer.ts`)   | NJ-1/2    |
-| multichannel (one `Image` per channel)   | one `ImageLayer` per channel, additive   | NJ-2      |
-| `Labels` (`layers/labels/labels.py`)     | `LabelsLayer`                            | NJ-5      |
-| `Points` (`layers/points/points.py`)     | `PointsLayer`                            | NJ-5      |
-| `Image` 3D / volume                      | `VolumeLayer`                            | NJ-5+     |
-| `Surface` (`layers/surface/surface.py`)  | `SurfaceLayer` (+ `heightField` helper)  | NJ-6      |
-| `Vectors`, `Tracks`, `Shapes`            | (not yet; Shapes ≈ jit-ui regions)       | later     |
+| napari layer (`layers/`)                | napari-js                               | Milestone |
+| --------------------------------------- | --------------------------------------- | --------- |
+| `Image` (`layers/image/image.py`)       | `ImageLayer` (`layers/image-layer.ts`)  | NJ-1/2    |
+| multichannel (one `Image` per channel)  | one `ImageLayer` per channel, additive  | NJ-2      |
+| `Labels` (`layers/labels/labels.py`)    | `LabelsLayer`                           | NJ-5      |
+| `Points` (`layers/points/points.py`)    | `PointsLayer`                           | NJ-5      |
+| `Image` 3D / volume                     | `VolumeLayer`                           | NJ-5+     |
+| `Surface` (`layers/surface/surface.py`) | `SurfaceLayer` (+ `heightField` helper) | NJ-6      |
+| `Vectors`, `Tracks`, `Shapes`           | (not yet; Shapes ≈ jit-ui regions)      | later     |
 
 Shared layer properties (napari `layers/base/base.py`) → napari-js `layers/layer.ts`:
 `opacity`, `blending`, `visible`, `name`, and an affine `transform` (scale/translate/rotate

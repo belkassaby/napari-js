@@ -7,6 +7,7 @@ struct U {
   mvp : mat4x4<f32>,
   params : vec4<f32>,   // lo, hi, gamma, opacity
   light : vec4<f32>,    // lightDir.xyz (world, toward viewer), ambient
+  flags : vec4<f32>,    // wireframe (0/1), 0, 0, 0
 };
 @group(0) @binding(0) var<uniform> u : U;
 @group(0) @binding(1) var lutSampler : sampler;
@@ -29,12 +30,14 @@ fn vs(@location(0) pos : vec3<f32>, @location(1) value : f32) -> VSOut {
 
 @fragment
 fn fs(in : VSOut) -> @location(0) vec4<f32> {
-  // Flat face normal from the world-position gradient across the triangle.
+  // Flat face normal from the world-position gradient across the triangle (kept in uniform control
+  // flow so the derivative builtins are always evaluated). Wireframe lines are drawn fullbright,
+  // since screen-space derivatives are ill-defined for line primitives.
   let n = normalize(cross(dpdx(in.worldPos), dpdy(in.worldPos)));
   let L = normalize(u.light.xyz);
   let ambient = u.light.w;
   let diffuse = abs(dot(n, L));            // abs → light both faces (two-sided mesh)
-  let shade = ambient + (1.0 - ambient) * diffuse;
+  let shade = select(ambient + (1.0 - ambient) * diffuse, 1.0, u.flags.x > 0.5);
 
   let lo = u.params.x;
   let hi = u.params.y;

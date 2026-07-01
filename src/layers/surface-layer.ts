@@ -11,6 +11,8 @@ export interface SurfaceLayerOptions {
   opacity?: number;
   blending?: BlendMode;
   visible?: boolean;
+  /** Render as a wireframe (triangle edges as lines) instead of a filled, shaded surface. */
+  wireframe?: boolean;
 }
 
 /** Axis-aligned bounds of a mesh, plus a center + framing radius for the 3D camera. */
@@ -29,6 +31,9 @@ export interface HeightFieldOptions {
   zLimits?: [number, number];
   /** Take every `stride`-th sample in x and y to decimate a large image (default 1). */
   stride?: number;
+  /** Center the mesh on the origin on all axes (instead of the positive octant), so it can be
+   *  wrapped in an origin-centered {@link AxesLayer} gizmo and framed like a volume. Default false. */
+  center?: boolean;
 }
 
 /** Interleaved GPU vertex = [x, y, z, value] → 4 floats. */
@@ -59,6 +64,7 @@ export class SurfaceLayer extends Layer {
   private _colormap: Colormap;
   private _contrastLimits: [number, number];
   private _gamma: number;
+  private _wireframe: boolean;
 
   constructor(
     vertices: Float32Array,
@@ -86,6 +92,7 @@ export class SurfaceLayer extends Layer {
     this._colormap = resolveColormap(opts.colormap ?? 'viridis');
     this._contrastLimits = opts.contrastLimits ?? valueRange(vals);
     this._gamma = opts.gamma ?? 1;
+    this._wireframe = opts.wireframe ?? false;
     this._blending = opts.blending ?? 'opaque';
     if (opts.opacity !== undefined) this._opacity = opts.opacity;
     if (opts.visible !== undefined) this._visible = opts.visible;
@@ -116,6 +123,15 @@ export class SurfaceLayer extends Layer {
     this.changed.emit(this);
   }
 
+  /** Render as a wireframe (edges only) vs a filled, shaded surface. Live — no geometry rebuild. */
+  get wireframe(): boolean {
+    return this._wireframe;
+  }
+  set wireframe(value: boolean) {
+    this._wireframe = value;
+    this.changed.emit(this);
+  }
+
   /** Axis-aligned bounds + a center/radius the viewer uses to frame the orbit camera. */
   bounds(): SurfaceBounds {
     const v = this.vertices;
@@ -136,9 +152,28 @@ export class SurfaceLayer extends Layer {
       (min[1] + max[1]) / 2,
       (min[2] + max[2]) / 2,
     ];
-    const radius =
-      0.5 * Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2]) || 1;
+    const radius = 0.5 * Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2]) || 1;
     return { min, max, center, radius };
+  }
+
+  /** Line-list index buffer of the triangle edges, for wireframe rendering: each face (a,b,c) →
+   *  the three edges (a,b) (b,c) (c,a) as index pairs. Shared edges are emitted twice (harmless
+   *  overdraw). Length = `faces.length * 2`. */
+  buildEdgeIndices(): Uint32Array {
+    const out = new Uint32Array(this.faces.length * 2);
+    let e = 0;
+    for (let t = 0; t < this.faces.length; t += 3) {
+      const a = this.faces[t];
+      const b = this.faces[t + 1];
+      const c = this.faces[t + 2];
+      out[e++] = a;
+      out[e++] = b;
+      out[e++] = b;
+      out[e++] = c;
+      out[e++] = c;
+      out[e++] = a;
+    }
+    return out;
   }
 
   /** Interleave positions + values into the GPU vertex buffer (N × [x, y, z, value]). */
@@ -203,9 +238,10 @@ export function heightField(
       const idx = gy * gw + gx;
       const raw = sampleAt(gx, gy);
       const t = (raw - lo) / span;
+      const tz = t < 0 ? 0 : t > 1 ? 1 : t; // clamp height into [0, zScale]; `values` keep raw for colour
       vertices[idx * 3] = Math.min(cols - 1, gx * stride); // world x = data column
       vertices[idx * 3 + 1] = Math.min(rows - 1, gy * stride); // world y = data row
-      vertices[idx * 3 + 2] = t * zScale; // world z = normalized height
+      vertices[idx * 3 + 2] = tz * zScale; // world z = intensity normalized within [lo, hi]
       values[idx] = raw;
     }
   }
@@ -228,7 +264,30 @@ export function heightField(
     }
   }
 
+  if (opts.center) centerVerticesInPlace(vertices);
   return { vertices, faces, values };
+}
+
+/** Offset an N×3 position array so its bounding box is centered on the origin (all axes). */
+function centerVerticesInPlace(vertices: Float32Array): void {
+  if (vertices.length === 0) return;
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < vertices.length; i += 3) {
+    for (let a = 0; a < 3; a++) {
+      const c = vertices[i + a];
+      if (c < min[a]) min[a] = c;
+      if (c > max[a]) max[a] = c;
+    }
+  }
+  const cx = (min[0] + max[0]) / 2;
+  const cy = (min[1] + max[1]) / 2;
+  const cz = (min[2] + max[2]) / 2;
+  for (let i = 0; i < vertices.length; i += 3) {
+    vertices[i] -= cx;
+    vertices[i + 1] -= cy;
+    vertices[i + 2] -= cz;
+  }
 }
 
 /** Default per-vertex values = each vertex's z, so a bare mesh colors by height. */

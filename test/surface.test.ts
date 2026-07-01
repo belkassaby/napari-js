@@ -61,6 +61,29 @@ describe('SurfaceLayer', () => {
     expect(b.radius).toBeCloseTo(0.5 * Math.hypot(2, 4, 0), 5);
   });
 
+  it('toggles wireframe (default off) and emits changed', () => {
+    const s = new SurfaceLayer(QUAD_VERTS, QUAD_FACES, QUAD_VALUES);
+    expect(s.wireframe).toBe(false);
+    let n = 0;
+    s.changed.connect(() => n++);
+    s.wireframe = true;
+    expect(s.wireframe).toBe(true);
+    expect(n).toBe(1);
+    expect(
+      new SurfaceLayer(QUAD_VERTS, QUAD_FACES, QUAD_VALUES, { wireframe: true }).wireframe,
+    ).toBe(true);
+  });
+
+  it('builds a line-list edge index buffer (3 edges per triangle)', () => {
+    const s = new SurfaceLayer(QUAD_VERTS, QUAD_FACES, QUAD_VALUES);
+    const edges = s.buildEdgeIndices();
+    expect(edges.length).toBe(QUAD_FACES.length * 2); // 12 for two triangles
+    // First triangle (0,1,2) → edges (0,1) (1,2) (2,0).
+    expect(Array.from(edges.subarray(0, 6))).toEqual([0, 1, 1, 2, 2, 0]);
+    // Second triangle (0,2,3) → edges (0,2) (2,3) (3,0).
+    expect(Array.from(edges.subarray(6, 12))).toEqual([0, 2, 2, 3, 3, 0]);
+  });
+
   it('interleaves [x,y,z,value] into the GPU vertex buffer', () => {
     const s = new SurfaceLayer(QUAD_VERTS, QUAD_FACES, QUAD_VALUES);
     const data = s.buildVertexData();
@@ -113,5 +136,25 @@ describe('heightField', () => {
     expect(vertices.length).toBe(9 * 3);
     // last vertex x/y should reach the far corner (col 4, row 4).
     expect([vertices[8 * 3], vertices[8 * 3 + 1]]).toEqual([4, 4]);
+  });
+
+  it('centers the mesh on the origin when center=true', () => {
+    const data = [0, 0, 0, 100]; // 2×2, default zLimits [0,100]
+    const { vertices } = heightField(data, 2, 2, { zScale: 10, center: true });
+    const xs = [vertices[0], vertices[3], vertices[6], vertices[9]];
+    const zs = [vertices[2], vertices[5], vertices[8], vertices[11]];
+    expect(Math.min(...xs)).toBeCloseTo(-0.5, 5); // x span 0..1 → [-0.5, 0.5]
+    expect(Math.max(...xs)).toBeCloseTo(0.5, 5);
+    expect(Math.min(...zs)).toBeCloseTo(-5, 5); // z span 0..10 → [-5, 5]
+    expect(Math.max(...zs)).toBeCloseTo(5, 5);
+  });
+
+  it('clamps height into [0, zScale] for intensities outside the z window', () => {
+    // data 0..100 but window [0,50] → the 50 and 100 pixels both clamp to the top, not 2× the box.
+    const data = [0, 25, 50, 100];
+    const { vertices } = heightField(data, 2, 2, { zScale: 10, zLimits: [0, 50] });
+    const zs = [vertices[2], vertices[5], vertices[8], vertices[11]];
+    expect(Math.max(...zs)).toBeCloseTo(10, 5);
+    expect(zs[3]).toBeCloseTo(10, 5); // the 100 pixel (idx 3) clamped to zScale
   });
 });

@@ -3,6 +3,25 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.9.2]
+
+### Added
+
+- **Surface wireframe.** `SurfaceLayer.wireframe` (and the `wireframe` option) renders the mesh as
+  its triangle edges (a `line-list`, colored by the value LUT, fullbright) instead of a filled,
+  shaded surface — toggle it live with no geometry rebuild. `buildEdgeIndices()` derives the edge
+  index buffer from the faces. Playground demo 6 toggles it with `w`.
+
+## [0.9.1]
+
+### Added
+
+- **`heightField` — `center` option + windowed heights.** `heightField(..., { center: true })` centers
+  the mesh on the origin (all axes) so it can be wrapped in an origin-centered `AxesLayer` gizmo and
+  framed like a volume. Heights are now clamped into `[0, zScale]` for intensities outside `zLimits`,
+  so an explicit contrast window maps 1:1 to relief (a consumer can re-run `heightField` with the
+  live `[min, max]` to make the surface's Z follow the contrast window).
+
 ## [0.9.0]
 
 ### Added

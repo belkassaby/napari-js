@@ -7,7 +7,7 @@ import { SURFACE_SHADER } from './surface-shader';
 import { blendStateFor } from './blend';
 
 const VERTEX_STRIDE = SURFACE_VERTEX_FLOATS * 4; // [x,y,z,value] → 16 bytes
-const UNIFORM_FLOATS = 24; // mat4(16) + params vec4 + light vec4
+const UNIFORM_FLOATS = 28; // mat4(16) + params vec4 + light vec4 + flags vec4
 const UNIFORM_BYTES = UNIFORM_FLOATS * 4;
 const AMBIENT = 0.35;
 
@@ -25,12 +25,15 @@ export class SurfaceVisual implements LayerVisual {
   private readonly scratch = new Float32Array(UNIFORM_FLOATS);
   private readonly vertexBuffer: GPUBuffer;
   private readonly indexBuffer: GPUBuffer;
+  private readonly edgeBuffer: GPUBuffer;
   private readonly lutTexture: GPUTexture;
   private readonly lutSampler: GPUSampler;
   private readonly indexCount: number;
+  private readonly edgeCount: number;
   private bindGroup: GPUBindGroup;
   private pipeline: GPURenderPipeline;
   private currentBlend: BlendMode;
+  private currentWireframe: boolean;
   private lutVersion: number;
 
   constructor(
@@ -63,6 +66,17 @@ export class SurfaceVisual implements LayerVisual {
       device.queue.writeBuffer(this.indexBuffer, 0, layer.faces as GPUAllowSharedBufferSource);
     }
 
+    // Wireframe edge index buffer (line-list of the triangle edges).
+    const edges = layer.buildEdgeIndices();
+    this.edgeCount = edges.length;
+    this.edgeBuffer = device.createBuffer({
+      size: Math.max(4, edges.byteLength),
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    if (edges.byteLength > 0) {
+      device.queue.writeBuffer(this.edgeBuffer, 0, edges as GPUAllowSharedBufferSource);
+    }
+
     this.lutTexture = device.createTexture({
       size: [LUT_SIZE, 1],
       format: 'rgba8unorm',
@@ -73,11 +87,12 @@ export class SurfaceVisual implements LayerVisual {
     this.lutSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
     this.currentBlend = layer.blending;
-    this.pipeline = this.buildPipeline(layer.blending);
+    this.currentWireframe = layer.wireframe;
+    this.pipeline = this.buildPipeline(layer.blending, layer.wireframe);
     this.bindGroup = this.buildBindGroup();
   }
 
-  private buildPipeline(blend: BlendMode): GPURenderPipeline {
+  private buildPipeline(blend: BlendMode, wireframe: boolean): GPURenderPipeline {
     return this.device.createRenderPipeline({
       layout: 'auto',
       vertex: {
@@ -98,7 +113,8 @@ export class SurfaceVisual implements LayerVisual {
         entryPoint: 'fs',
         targets: [{ format: this.format, blend: blendStateFor(blend) }],
       },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      // Wireframe draws the triangle edges as a line-list; filled draws the triangles.
+      primitive: { topology: wireframe ? 'line-list' : 'triangle-list', cullMode: 'none' },
       depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
     });
   }
@@ -124,9 +140,13 @@ export class SurfaceVisual implements LayerVisual {
   }
 
   sync(): void {
-    if (this.layer.blending !== this.currentBlend) {
+    if (
+      this.layer.blending !== this.currentBlend ||
+      this.layer.wireframe !== this.currentWireframe
+    ) {
       this.currentBlend = this.layer.blending;
-      this.pipeline = this.buildPipeline(this.currentBlend);
+      this.currentWireframe = this.layer.wireframe;
+      this.pipeline = this.buildPipeline(this.currentBlend, this.currentWireframe);
       this.bindGroup = this.buildBindGroup();
     }
     if (this.layer.colormapVersion !== this.lutVersion) {
@@ -136,7 +156,9 @@ export class SurfaceVisual implements LayerVisual {
   }
 
   draw(pass: GPURenderPassEncoder, view: RenderView): void {
-    if (this.indexCount === 0) return;
+    const wireframe = this.layer.wireframe;
+    const count = wireframe ? this.edgeCount : this.indexCount;
+    if (count === 0) return;
     const s = this.scratch;
     s.set(view.camera3d.viewProjection(view.vw, view.vh), 0);
     const [lo, hi] = this.layer.contrastLimits;
@@ -158,18 +180,23 @@ export class SurfaceVisual implements LayerVisual {
     s[21] = ly;
     s[22] = lz;
     s[23] = AMBIENT;
+    s[24] = wireframe ? 1 : 0;
+    s[25] = 0;
+    s[26] = 0;
+    s[27] = 0;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, s);
 
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
     pass.setVertexBuffer(0, this.vertexBuffer);
-    pass.setIndexBuffer(this.indexBuffer, 'uint32');
-    pass.drawIndexed(this.indexCount);
+    pass.setIndexBuffer(wireframe ? this.edgeBuffer : this.indexBuffer, 'uint32');
+    pass.drawIndexed(count);
   }
 
   dispose(): void {
     this.vertexBuffer.destroy();
     this.indexBuffer.destroy();
+    this.edgeBuffer.destroy();
     this.lutTexture.destroy();
     this.uniformBuffer.destroy();
   }

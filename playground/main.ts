@@ -224,14 +224,22 @@ async function demoSurface(): Promise<void> {
   const colormaps = ['viridis', 'magma', 'gray'];
   let ci = 0;
   const surface = v.addSurface(vertices, faces, values, { colormap: colormaps[ci] });
+  const line = (): string =>
+    `surface · ${values.length} verts, ${faces.length / 3} tris · colormap ${colormaps[ci]}` +
+    `${surface.wireframe ? ' · wireframe' : ''} · drag = orbit, wheel = zoom, c = colormap, w = wireframe`;
   onKey = (e) => {
-    if (e.key !== 'c') return;
-    ci = (ci + 1) % colormaps.length;
-    surface.colormap = colormaps[ci];
+    if (e.key === 'c') {
+      ci = (ci + 1) % colormaps.length;
+      surface.colormap = colormaps[ci];
+    } else if (e.key === 'w') {
+      surface.wireframe = !surface.wireframe;
+    } else {
+      return;
+    }
     v.requestRender();
-    status(`surface · ${values.length} verts, ${faces.length / 3} tris · colormap ${colormaps[ci]} · drag = orbit, wheel = zoom, c = colormap`);
+    status(line());
   };
-  status(`surface · ${values.length} verts, ${faces.length / 3} tris · drag = orbit, wheel = zoom, c = colormap`);
+  status(line());
 }
 
 interface DemoDef {
