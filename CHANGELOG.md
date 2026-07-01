@@ -3,6 +3,29 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.9.0]
+
+### Added
+
+- **Surface layer** — a 3D triangular mesh (the napari `Surface` layer analog), the last of
+  napari's core layer types to be ported. `Viewer.addSurface(vertices, faces, values?, opts?)`
+  takes `vertices` (N×3, world/data coords, x-fastest), `faces` (M×3 triangle indices), and
+  optional per-vertex `values` colored through a colormap (windowed by `contrastLimits` + `gamma`;
+  defaults to coloring by z). It switches the viewer to 3D and frames the orbit camera on the mesh
+  bounds. Rendered as an indexed triangle mesh with **depth testing** and two-sided, screen-space
+  flat shading (normals derived per-fragment via `dpdx`/`dpdy` — no per-vertex normals needed).
+- **`heightField(data, cols, rows, opts?)`** — a pure, GPU-free helper that turns a 2D scalar grid
+  into a height-field surface mesh (z = normalized intensity), the classic "surface plot". Supports
+  `zScale`, `zLimits`, and `stride` decimation for large images. Returns generic
+  `{ vertices, faces, values }` for `addSurface`, so a host can render a surface in two calls.
+
+### Changed
+
+- **Depth buffer for 3D passes** — the renderer now attaches a `depth24plus` depth texture when
+  drawing `ndisplay === 3` layers, so surface meshes self-occlude correctly. Volume and axes
+  visuals keep their previous look (they never depth-test or write). 2D passes are unchanged (no
+  depth attachment).
+
 ## [0.5.1]
 
 ### Added

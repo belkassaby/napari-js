@@ -1,0 +1,176 @@
+import type { SurfaceLayer } from '../layers/surface-layer';
+import { SURFACE_VERTEX_FLOATS } from '../layers/surface-layer';
+import type { BlendMode } from '../layers/layer';
+import { DEPTH_FORMAT, type LayerVisual, type RenderView } from './layer-visual';
+import { buildLut, LUT_SIZE } from '../color/lut';
+import { SURFACE_SHADER } from './surface-shader';
+import { blendStateFor } from './blend';
+
+const VERTEX_STRIDE = SURFACE_VERTEX_FLOATS * 4; // [x,y,z,value] → 16 bytes
+const UNIFORM_FLOATS = 24; // mat4(16) + params vec4 + light vec4
+const UNIFORM_BYTES = UNIFORM_FLOATS * 4;
+const AMBIENT = 0.35;
+
+/**
+ * Renders a {@link SurfaceLayer} as an indexed triangle mesh (see surface-shader.ts). Uploads the
+ * interleaved position+value vertex buffer and the face index buffer once (the mesh is immutable);
+ * only the LUT and blend pipeline are rebuilt reactively. Uses depth testing (the renderer attaches
+ * a depth buffer for 3D passes) so the mesh self-occludes correctly under the orbit camera.
+ */
+export class SurfaceVisual implements LayerVisual {
+  readonly ndisplay = 3 as 2 | 3;
+
+  private readonly module: GPUShaderModule;
+  private readonly uniformBuffer: GPUBuffer;
+  private readonly scratch = new Float32Array(UNIFORM_FLOATS);
+  private readonly vertexBuffer: GPUBuffer;
+  private readonly indexBuffer: GPUBuffer;
+  private readonly lutTexture: GPUTexture;
+  private readonly lutSampler: GPUSampler;
+  private readonly indexCount: number;
+  private bindGroup: GPUBindGroup;
+  private pipeline: GPURenderPipeline;
+  private currentBlend: BlendMode;
+  private lutVersion: number;
+
+  constructor(
+    private readonly device: GPUDevice,
+    private readonly format: GPUTextureFormat,
+    private readonly layer: SurfaceLayer,
+  ) {
+    this.module = device.createShaderModule({ code: SURFACE_SHADER });
+    this.uniformBuffer = device.createBuffer({
+      size: UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    const verts = layer.buildVertexData();
+    this.vertexBuffer = device.createBuffer({
+      size: Math.max(VERTEX_STRIDE, verts.byteLength),
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    if (verts.byteLength > 0) {
+      device.queue.writeBuffer(this.vertexBuffer, 0, verts as GPUAllowSharedBufferSource);
+    }
+
+    // Index buffers must be a multiple of 4 bytes; uint32 indices already satisfy that.
+    this.indexCount = layer.indexCount;
+    this.indexBuffer = device.createBuffer({
+      size: Math.max(4, layer.faces.byteLength),
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    if (layer.faces.byteLength > 0) {
+      device.queue.writeBuffer(this.indexBuffer, 0, layer.faces as GPUAllowSharedBufferSource);
+    }
+
+    this.lutTexture = device.createTexture({
+      size: [LUT_SIZE, 1],
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+    this.writeLut();
+    this.lutVersion = layer.colormapVersion;
+    this.lutSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+    this.currentBlend = layer.blending;
+    this.pipeline = this.buildPipeline(layer.blending);
+    this.bindGroup = this.buildBindGroup();
+  }
+
+  private buildPipeline(blend: BlendMode): GPURenderPipeline {
+    return this.device.createRenderPipeline({
+      layout: 'auto',
+      vertex: {
+        module: this.module,
+        entryPoint: 'vs',
+        buffers: [
+          {
+            arrayStride: VERTEX_STRIDE,
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+              { shaderLocation: 1, offset: 12, format: 'float32' }, // value
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: this.module,
+        entryPoint: 'fs',
+        targets: [{ format: this.format, blend: blendStateFor(blend) }],
+      },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
+    });
+  }
+
+  private buildBindGroup(): GPUBindGroup {
+    return this.device.createBindGroup({
+      layout: this.pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: this.uniformBuffer } },
+        { binding: 1, resource: this.lutSampler },
+        { binding: 2, resource: this.lutTexture.createView() },
+      ],
+    });
+  }
+
+  private writeLut(): void {
+    this.device.queue.writeTexture(
+      { texture: this.lutTexture },
+      buildLut(this.layer.colormap, LUT_SIZE),
+      { bytesPerRow: LUT_SIZE * 4, rowsPerImage: 1 },
+      { width: LUT_SIZE, height: 1 },
+    );
+  }
+
+  sync(): void {
+    if (this.layer.blending !== this.currentBlend) {
+      this.currentBlend = this.layer.blending;
+      this.pipeline = this.buildPipeline(this.currentBlend);
+      this.bindGroup = this.buildBindGroup();
+    }
+    if (this.layer.colormapVersion !== this.lutVersion) {
+      this.lutVersion = this.layer.colormapVersion;
+      this.writeLut();
+    }
+  }
+
+  draw(pass: GPURenderPassEncoder, view: RenderView): void {
+    if (this.indexCount === 0) return;
+    const s = this.scratch;
+    s.set(view.camera3d.viewProjection(view.vw, view.vh), 0);
+    const [lo, hi] = this.layer.contrastLimits;
+    s[16] = lo;
+    s[17] = hi;
+    s[18] = this.layer.gamma;
+    s[19] = this.layer.opacity;
+    // Headlight: light from the camera toward the scene, so the mesh is lit from the viewer side.
+    const eye = view.camera3d.eye();
+    const t = view.camera3d.target;
+    let lx = eye[0] - t[0];
+    let ly = eye[1] - t[1];
+    let lz = eye[2] - t[2];
+    const ll = Math.hypot(lx, ly, lz) || 1;
+    lx /= ll;
+    ly /= ll;
+    lz /= ll;
+    s[20] = lx;
+    s[21] = ly;
+    s[22] = lz;
+    s[23] = AMBIENT;
+    this.device.queue.writeBuffer(this.uniformBuffer, 0, s);
+
+    pass.setPipeline(this.pipeline);
+    pass.setBindGroup(0, this.bindGroup);
+    pass.setVertexBuffer(0, this.vertexBuffer);
+    pass.setIndexBuffer(this.indexBuffer, 'uint32');
+    pass.drawIndexed(this.indexCount);
+  }
+
+  dispose(): void {
+    this.vertexBuffer.destroy();
+    this.indexBuffer.destroy();
+    this.lutTexture.destroy();
+    this.uniformBuffer.destroy();
+  }
+}

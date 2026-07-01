@@ -1,5 +1,5 @@
 import { AxesLayer, axesLineVertices } from '../layers/axes-layer';
-import type { LayerVisual, RenderView } from './layer-visual';
+import { DEPTH_FORMAT, type LayerVisual, type RenderView } from './layer-visual';
 import { AXES_SHADER } from './axes-shader';
 
 const UNIFORM_BYTES = 64; // one mat4x4<f32>
@@ -7,8 +7,8 @@ const VERTEX_STRIDE = 24; // [x,y,z, r,g,b] × 4 bytes
 
 /**
  * Renders an {@link AxesLayer} as solid-colour GPU lines (`line-list`) transformed by the 3D
- * camera MVP. The render pass has no depth attachment, so the gizmo overlays the volume (drawn
- * after it) — the usual look for an axes/scale widget.
+ * camera MVP. It never depth-tests or writes (`depthCompare: 'always'`), so the gizmo overlays
+ * the volume/surface — the usual look for an axes/scale widget.
  */
 export class AxesVisual implements LayerVisual {
   readonly ndisplay = 3 as 2 | 3;
@@ -49,6 +49,7 @@ export class AxesVisual implements LayerVisual {
       },
       fragment: { module: this.module, entryPoint: 'fs', targets: [{ format }] },
       primitive: { topology: 'line-list' },
+      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: false, depthCompare: 'always' },
     });
     this.bindGroup = device.createBindGroup({
       layout: this.pipeline.getBindGroupLayout(0),

@@ -30,6 +30,12 @@ export { VolumeLayer } from './layers/volume-layer';
 export type { VolumeLayerOptions, VolumeRendering } from './layers/volume-layer';
 export { AxesLayer, axesLineVertices } from './layers/axes-layer';
 export type { AxesLayerOptions, AxesColors } from './layers/axes-layer';
+export { SurfaceLayer, heightField } from './layers/surface-layer';
+export type {
+  SurfaceLayerOptions,
+  SurfaceBounds,
+  HeightFieldOptions,
+} from './layers/surface-layer';
 export { nearestPointIndex } from './picking/pick';
 
 // Color

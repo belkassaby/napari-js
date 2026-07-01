@@ -4,6 +4,7 @@ import {
   nearestPointIndex,
   levelDims,
   levelScale,
+  heightField,
   type TypedImageSource,
   type TiledSource,
   type TileKey,
@@ -21,7 +22,7 @@ let viewer: Viewer | null = null;
 let onKey: ((e: KeyboardEvent) => void) | null = null;
 let cleanup: (() => void) | null = null;
 
-const DEMOS = '1 image · 2 multi-channel · 3 tiled+z · 4 points+labels · 5 volume';
+const DEMOS = '1 image · 2 multi-channel · 3 tiled+z · 4 points+labels · 5 volume · 6 surface';
 
 function status(line: string): void {
   msg.textContent = `napari-js ${VERSION} — [${DEMOS}]  ·  ${line}`;
@@ -204,6 +205,35 @@ async function demoVolume(): Promise<void> {
   status('volume (mip) · drag = orbit, wheel = zoom, m/t/i = mode');
 }
 
+async function demoSurface(): Promise<void> {
+  const v = await start({ r: 0.03, g: 0.03, b: 0.05, a: 1 });
+  if (!v) return;
+  // A 2D scalar field (rippled gaussians) → height-field surface mesh (z = intensity).
+  const W = 160;
+  const H = 120;
+  const field = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const g =
+        Math.exp(-(((x - 55) / 28) ** 2 + ((y - 45) / 28) ** 2)) +
+        0.8 * Math.exp(-(((x - 110) / 22) ** 2 + ((y - 80) / 22) ** 2));
+      const ripple = 0.15 * (0.5 + 0.5 * Math.sin(x / 9) * Math.cos(y / 11));
+      field[y * W + x] = Math.min(255, Math.round(255 * (0.9 * g + ripple)));
+    }
+  const { vertices, faces, values } = heightField(field, W, H, { zScale: 60 });
+  const colormaps = ['viridis', 'magma', 'gray'];
+  let ci = 0;
+  const surface = v.addSurface(vertices, faces, values, { colormap: colormaps[ci] });
+  onKey = (e) => {
+    if (e.key !== 'c') return;
+    ci = (ci + 1) % colormaps.length;
+    surface.colormap = colormaps[ci];
+    v.requestRender();
+    status(`surface · ${values.length} verts, ${faces.length / 3} tris · colormap ${colormaps[ci]} · drag = orbit, wheel = zoom, c = colormap`);
+  };
+  status(`surface · ${values.length} verts, ${faces.length / 3} tris · drag = orbit, wheel = zoom, c = colormap`);
+}
+
 interface DemoDef {
   id: string;
   label: string;
@@ -216,6 +246,7 @@ const demoList: DemoDef[] = [
   { id: '3', label: '3 · Tiled + z-stack', run: demoTiled },
   { id: '4', label: '4 · Points + Labels', run: demoPointsLabels },
   { id: '5', label: '5 · Volume (3D)', run: demoVolume },
+  { id: '6', label: '6 · Surface (3D mesh)', run: demoSurface },
 ];
 
 const select = document.getElementById('demo') as HTMLSelectElement;

@@ -20,6 +20,8 @@ A browser-native, **WebGPU** rendering engine that ports the visualization model
   **z-stacks** — fed by a pluggable `TextureSource` (typed arrays or `ImageBitmap` tiles).
 - **Points** (instanced SDF markers) and **Labels** (`uint8`/`uint16`/`uint32` ids, cyclic palette).
 - **3D volume raymarching** — MIP, translucent, and iso-surface, with an orbit camera.
+- **Surface** — a 3D triangular mesh (napari's `Surface` layer) with per-vertex colormapping and
+  depth-tested flat shading, plus a `heightField` helper that turns a 2D image into a surface plot.
 - **Readback**: displayed-pixel readout, PNG screenshot, and per-channel histograms.
 - **Host-friendly**: device-loss recovery, `ResizeObserver` auto-resize, and
   `canvasToWorld` / `worldToCanvas` / `visibleWorldRect` for overlays and picking.
@@ -53,7 +55,7 @@ A layer's data is any `TextureSource` input: an `ImageBitmap`, a typed-array des
 
 ```bash
 npm install
-npm run dev          # serve the playground (dropdown: image · multi-channel · tiled · points+labels · volume)
+npm run dev          # serve the playground (dropdown: image · multi-channel · tiled · points+labels · volume · surface)
 npm test             # GPU-free unit tests (Vitest)
 npm run test:coverage
 npm run typecheck && npm run lint && npm run format:check

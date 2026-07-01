@@ -23,7 +23,8 @@ A reference for porters: where each napari (Python) concept lives, and its napar
 | `Labels` (`layers/labels/labels.py`)     | `LabelsLayer`                            | NJ-5      |
 | `Points` (`layers/points/points.py`)     | `PointsLayer`                            | NJ-5      |
 | `Image` 3D / volume                      | `VolumeLayer`                            | NJ-5+     |
-| `Surface`, `Vectors`, `Tracks`, `Shapes` | (not initially; Shapes ≈ jit-ui regions) | later     |
+| `Surface` (`layers/surface/surface.py`)  | `SurfaceLayer` (+ `heightField` helper)  | NJ-6      |
+| `Vectors`, `Tracks`, `Shapes`            | (not yet; Shapes ≈ jit-ui regions)       | later     |
 
 Shared layer properties (napari `layers/base/base.py`) → napari-js `layers/layer.ts`:
 `opacity`, `blending`, `visible`, `name`, and an affine `transform` (scale/translate/rotate

@@ -1,6 +1,6 @@
 import type { VolumeLayer } from '../layers/volume-layer';
 import type { BlendMode } from '../layers/layer';
-import type { LayerVisual, RenderView } from './layer-visual';
+import { DEPTH_FORMAT, type LayerVisual, type RenderView } from './layer-visual';
 import { multiply, scale3d, translate3d, invert } from '../math/mat4';
 import { buildLut, LUT_SIZE } from '../color/lut';
 import { VOLUME_SHADER } from './volume-shader';
@@ -93,6 +93,9 @@ export class VolumeVisual implements LayerVisual {
         targets: [{ format: this.format, blend: blendStateFor(blend) }],
       },
       primitive: { topology: 'triangle-list' },
+      // The volume is a full-screen raymarch quad: never depth-test or write, so it composites
+      // exactly as before now that 3D passes carry a depth attachment.
+      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: false, depthCompare: 'always' },
     });
   }
 

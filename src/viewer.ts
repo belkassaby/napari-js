@@ -10,6 +10,7 @@ import { PointsLayer, type PointsLayerOptions } from './layers/points-layer';
 import { LabelsLayer, type LabelsLayerOptions, type LabelData } from './layers/labels-layer';
 import { VolumeLayer, type VolumeLayerOptions } from './layers/volume-layer';
 import { AxesLayer, type AxesLayerOptions } from './layers/axes-layer';
+import { SurfaceLayer, type SurfaceLayerOptions } from './layers/surface-layer';
 import type { Layer } from './layers/layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
 import { worldViewport, type Rect } from './io/pyramid';
@@ -246,6 +247,28 @@ export class Viewer {
   }
 
   /**
+   * Add a 3D triangular-mesh surface (the napari `Surface` layer analog): `vertices` (N×3,
+   * world/data coords, x-fastest), `faces` (M×3 triangle indices), and optional per-vertex
+   * `values` colored through a colormap (defaults to coloring by z). Switches the viewer to 3D
+   * (`dims.ndisplay = 3`) and frames the orbit camera on the mesh bounds. Build a height-field
+   * mesh from a 2D scalar image with {@link heightField}.
+   */
+  addSurface(
+    vertices: Float32Array,
+    faces: Uint32Array,
+    values?: Float32Array,
+    opts: SurfaceLayerOptions = {},
+  ): SurfaceLayer {
+    const layer = new SurfaceLayer(vertices, faces, values, opts);
+    this.model.layers.add(layer);
+    const b = layer.bounds();
+    this.model.camera3d.target = b.center;
+    this.model.camera3d.distance = Math.max(b.radius * 2.5, 1e-3);
+    this.model.dims.ndisplay = 3;
+    return layer;
+  }
+
+  /**
    * Add a 3D coordinate-axes / scale gizmo sized to a `[width,height,depth]` volume (it shares
    * the volume's centred world box). Renders only in 3D; toggle with `layer.visible`.
    */
@@ -346,6 +369,8 @@ export class Viewer {
       cssW,
       cssH,
       this.background,
+      w,
+      h,
     );
     const data = await readTextureToRGBA(this.ctx.device, texture, w, h, format);
     texture.destroy();
