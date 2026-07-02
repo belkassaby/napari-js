@@ -22,7 +22,8 @@ let viewer: Viewer | null = null;
 let onKey: ((e: KeyboardEvent) => void) | null = null;
 let cleanup: (() => void) | null = null;
 
-const DEMOS = '1 image · 2 multi-channel · 3 tiled+z · 4 points+labels · 5 volume · 6 surface';
+const DEMOS =
+  '1 image · 2 multi-channel · 3 tiled+z · 4 points+labels · 5 volume · 6 surface · 7 scatter3d';
 
 function status(line: string): void {
   msg.textContent = `napari-js ${VERSION} — [${DEMOS}]  ·  ${line}`;
@@ -242,6 +243,26 @@ async function demoSurface(): Promise<void> {
   status(line());
 }
 
+async function demoScatter3d(): Promise<void> {
+  const v = await start({ r: 0.03, g: 0.03, b: 0.05, a: 1 });
+  if (!v) return;
+  // A 3D point cloud on two nested spheres, colored by radius.
+  const N = 4000;
+  const pos = new Float32Array(N * 3);
+  const val = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const r = i % 2 === 0 ? 30 : 55;
+    const th = (i * 2.399963) % (Math.PI * 2); // golden-angle spiral
+    const ph = Math.acos(1 - (2 * (i + 0.5)) / N);
+    pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+    pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+    pos[i * 3 + 2] = r * Math.cos(ph);
+    val[i] = r;
+  }
+  v.addPoints3D(pos, val, { colormap: 'viridis', size: 6 });
+  status(`3D scatter · ${N} points · drag = orbit, wheel = zoom`);
+}
+
 interface DemoDef {
   id: string;
   label: string;
@@ -255,6 +276,7 @@ const demoList: DemoDef[] = [
   { id: '4', label: '4 · Points + Labels', run: demoPointsLabels },
   { id: '5', label: '5 · Volume (3D)', run: demoVolume },
   { id: '6', label: '6 · Surface (3D mesh)', run: demoSurface },
+  { id: '7', label: '7 · Scatter (3D points)', run: demoScatter3d },
 ];
 
 const select = document.getElementById('demo') as HTMLSelectElement;

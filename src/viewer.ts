@@ -11,6 +11,7 @@ import { LabelsLayer, type LabelsLayerOptions, type LabelData } from './layers/l
 import { VolumeLayer, type VolumeLayerOptions } from './layers/volume-layer';
 import { AxesLayer, type AxesLayerOptions } from './layers/axes-layer';
 import { SurfaceLayer, type SurfaceLayerOptions } from './layers/surface-layer';
+import { Points3DLayer, type Points3DLayerOptions } from './layers/points3d-layer';
 import type { Layer } from './layers/layer';
 import { toTextureSource, depthOf, type ImageInput } from './io/texture-source';
 import { worldViewport, type Rect } from './io/pyramid';
@@ -260,6 +261,25 @@ export class Viewer {
     opts: SurfaceLayerOptions = {},
   ): SurfaceLayer {
     const layer = new SurfaceLayer(vertices, faces, values, opts);
+    this.model.layers.add(layer);
+    const b = layer.bounds();
+    this.model.camera3d.target = b.center;
+    this.model.camera3d.distance = Math.max(b.radius * 2.5, 1e-3);
+    this.model.dims.ndisplay = 3;
+    return layer;
+  }
+
+  /**
+   * Add a 3D scatter of point markers (the napari Points-in-3D analog): `positions` (N×3,
+   * world/data coords, x-fastest) with optional per-point `values` colored through a colormap.
+   * Switches the viewer to 3D (`dims.ndisplay = 3`) and frames the orbit camera on the points.
+   */
+  addPoints3D(
+    positions: Float32Array,
+    values?: Float32Array,
+    opts: Points3DLayerOptions = {},
+  ): Points3DLayer {
+    const layer = new Points3DLayer(positions, values, opts);
     this.model.layers.add(layer);
     const b = layer.bounds();
     this.model.camera3d.target = b.center;

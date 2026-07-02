@@ -36,6 +36,8 @@ export type {
   SurfaceBounds,
   HeightFieldOptions,
 } from './layers/surface-layer';
+export { Points3DLayer } from './layers/points3d-layer';
+export type { Points3DLayerOptions } from './layers/points3d-layer';
 export { nearestPointIndex } from './picking/pick';
 
 // Color

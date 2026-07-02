@@ -8,6 +8,7 @@ import { LabelsLayer } from '../layers/labels-layer';
 import { VolumeLayer } from '../layers/volume-layer';
 import { AxesLayer } from '../layers/axes-layer';
 import { SurfaceLayer } from '../layers/surface-layer';
+import { Points3DLayer } from '../layers/points3d-layer';
 import { ImageVisual } from '../visuals/image-visual';
 import { TiledImageVisual } from '../visuals/tiled-image-visual';
 import { PointsVisual } from '../visuals/points-visual';
@@ -15,6 +16,7 @@ import { LabelsVisual } from '../visuals/labels-visual';
 import { VolumeVisual } from '../visuals/volume-visual';
 import { AxesVisual } from '../visuals/axes-visual';
 import { SurfaceVisual } from '../visuals/surface-visual';
+import { Points3DVisual } from '../visuals/points3d-visual';
 import { DEPTH_FORMAT, type LayerVisual, type RenderView } from '../visuals/layer-visual';
 
 /** Camera/dims inputs the viewer hands to a render call (viewport size is filled internally). */
@@ -76,6 +78,7 @@ export class Renderer {
     if (layer instanceof VolumeLayer) return new VolumeVisual(this.device, format, layer);
     if (layer instanceof AxesLayer) return new AxesVisual(this.device, format, layer);
     if (layer instanceof SurfaceLayer) return new SurfaceVisual(this.device, format, layer);
+    if (layer instanceof Points3DLayer) return new Points3DVisual(this.device, format, layer);
     return null;
   }
 

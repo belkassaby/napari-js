@@ -3,6 +3,16 @@
 All notable changes to napari-js are documented here. The format roughly follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.9.3]
+
+### Added
+
+- **3D scatter (`Points3DLayer`)** — `Viewer.addPoints3D(positions, values?, opts?)` renders a 3D
+  point cloud: `positions` (N×3, world coords) with optional per-point `values` colored through a
+  colormap (windowed by `contrastLimits` + `gamma`). Drawn as instanced, screen-facing billboards
+  (disc SDF, `size` in px), depth-tested against the 3D pass so points occlude under the orbit
+  camera; frames the camera on the point bounds. Complements the 2D `PointsLayer`. Playground demo 7.
+
 ## [0.9.2]
 
 ### Added
